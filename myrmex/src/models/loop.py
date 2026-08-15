@@ -31,6 +31,7 @@ class ActionType(str, Enum):
     ANALYZE = "analyze"           # Daten analysieren (-10 Energie)
     CONSOLIDATE = "consolidate"   # Wissen konsolidieren (-5 Energie)
     VALIDATE = "validate"         # Wissen validieren (Guardian)
+    ARCHIVE = "archive"           # Wissen archivieren (Archivist)
 
 
 class LoopState(BaseModel):

@@ -14,6 +14,7 @@ from .simulator import SimulatorCaste
 from .theorist import TheoristCaste
 from .guardian import GuardianCaste
 from .hypothesizer import HypothesizerCaste
+from .archivist import ArchivistCaste
 from . import sim_models
 from .registry import CasteRegistry, get_registry, reset_registry
 from .ofat import create_baseline_profile, next_ofat_step, get_current_parameter_name
@@ -29,6 +30,7 @@ __all__ = [
     "TheoristCaste",
     "GuardianCaste",
     "HypothesizerCaste",
+    "ArchivistCaste",
     "sim_models",
     "CasteRegistry",
     "get_registry",

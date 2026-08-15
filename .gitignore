@@ -5,8 +5,10 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-env/
-venv/
+*.so
+*.egg-info/
+
+# Dependencies
 .venv/
 .ENV
 .venv.bak/

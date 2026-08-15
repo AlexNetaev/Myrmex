@@ -1,6 +1,6 @@
 {
-  "last_updated": "2026-08-15T17:30:29.337293Z",
-  "total_count": 1,
+  "last_updated": "2026-08-15T21:22:30.509189Z",
+  "total_count": 2,
   "pheromones": [
     {
       "id": "trail_test",
@@ -13,6 +13,22 @@
       "source_agent": "test",
       "created_at": "2026-08-15T17:30:29.310145Z",
       "file_path": "trails/trail_test.json"
+    },
+    {
+      "id": "pending_trail",
+      "type": "trail",
+      "strength": 0.5,
+      "effective_strength": 0.35,
+      "age_cycles": 0,
+      "relevance": 0.7,
+      "tags": [
+        "plan",
+        "experiment",
+        "ofat"
+      ],
+      "source_agent": "planner",
+      "created_at": "2026-08-15T21:22:30.508478Z",
+      "file_path": "trails/pending_trail.json"
     }
   ]
 }

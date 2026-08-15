@@ -1,4 +1,4 @@
-```yaml
+```
 # Compiled Python files
 *.pyc
 __pycache__/
@@ -8,16 +8,11 @@ __pycache__/
 venv/
 node_modules/
 
-# Testing
-.pytest_cache/
-.coverage
-coverage/
-htmlcov/
-
-# Logs
+# Logs and temporary files
 *.log
+*.tmp
 
-# Environment
+# Environment files
 .env
 .env.local
 *.env.*
@@ -25,16 +20,18 @@ htmlcov/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Tests
+.pytest_cache/
+.mypy_cache/
 
 # Build artifacts
 dist/
 build/
 target/
-
-# OS
-.DS_Store
-Thumbs.db
 ```

@@ -51,22 +51,22 @@ class DecisionEngine:
                 self._detour_loop_priorities(),
             )
         
-        # Wenn die Landschaft dünn ist, erkunden
-        if landscape.is_sparse:
-            return (
-                ArbiterActionType.EXPLORE,
-                f"Landscape is sparse ({landscape.trail_count} trails, "
-                f"{landscape.crystal_count} crystals). Exploring to gather more data.",
-                self._explore_loop_priorities(),
-            )
-        
-        # Wenn es einen starken Trail gibt, folgen
+        # Wenn es einen starken Trail gibt, folgen (PRIORITÄT VOR EXPLORE!)
         if landscape.has_strong_trail:
             return (
                 ArbiterActionType.FOLLOW_TRAIL,
                 f"Strong trail detected ({landscape.strongest_trail_id}). "
                 f"Following it towards the target crystal.",
                 self._follow_trail_loop_priorities(),
+            )
+        
+        # Wenn die Landschaft dünn ist UND keine klare Richtung existiert, erkunden
+        if landscape.is_sparse:
+            return (
+                ArbiterActionType.EXPLORE,
+                f"Landscape is sparse ({landscape.trail_count} trails, "
+                f"{landscape.crystal_count} crystals). Exploring to gather more data.",
+                self._explore_loop_priorities(),
             )
         
         # Default: Konsolidieren (mehr Messungen zum Verifizieren)

@@ -239,3 +239,14 @@ class TestDecisionPriority:
         
         # Ziel erreicht sollte Vorrang haben
         assert action == ArbiterActionType.CONSOLIDATE
+    
+    def test_strong_trail_beats_sparse(self, decision_engine):
+        """Ein starker Trail hat Vorrang vor is_sparse."""
+        landscape = LandscapeSummary(
+            trail_count=1, crystal_count=0,
+            has_strong_trail=True, strongest_trail_id="trail_001",
+            is_sparse=True,  # ← trotzdem sparse!
+            has_warning_nearby=False,
+        )
+        action, _, _ = decision_engine.decide(landscape, None, None)
+        assert action == ArbiterActionType.FOLLOW_TRAIL  # nicht EXPLORE!

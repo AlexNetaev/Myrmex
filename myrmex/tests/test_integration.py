@@ -119,10 +119,17 @@ class TestEndToEndIntegration:
         from src.castes.executor import ExecutorCaste
         assert registry.get_caste_for_action(ActionType.MEASURE) == ExecutorCaste
         
-        # SIMULATE und CONSOLIDATE sollten Placeholder zurückgeben (noch nicht implementiert)
-        from src.castes.placeholder import PlaceholderCaste
-        assert registry.get_caste_for_action(ActionType.SIMULATE) == PlaceholderCaste
-        assert registry.get_caste_for_action(ActionType.CONSOLIDATE) == PlaceholderCaste
+        # SIMULATE sollte SimulatorCaste zurückgeben (implementiert)
+        from src.castes.simulator import SimulatorCaste
+        assert registry.get_caste_for_action(ActionType.SIMULATE) == SimulatorCaste
+        
+        # CONSOLIDATE sollte TheoristCaste zurückgeben (implementiert)
+        from src.castes.theorist import TheoristCaste
+        assert registry.get_caste_for_action(ActionType.CONSOLIDATE) == TheoristCaste
+        
+        # VALIDATE sollte GuardianCaste zurückgeben (implementiert)
+        from src.castes.guardian import GuardianCaste
+        assert registry.get_caste_for_action(ActionType.VALIDATE) == GuardianCaste
     
     def test_energy_budget_updates_correctly(self, integration_workspace):
         """

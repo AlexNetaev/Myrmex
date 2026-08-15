@@ -1,0 +1,47 @@
+{
+  "job_id": "test_job_001",
+  "cycle_id": "Cycle_001",
+  "execution_timestamp": "2026-08-15T16:42:33.187422+00:00",
+  "simulator_name": "OrbusSim Dummy V2",
+  "simulator_version": "2.0.0-minimal",
+  "status": "OK",
+  "total_execution_time_s": 0.0,
+  "hardware_faults_detected": false,
+  "fault_details": [],
+  "target_parameters": {
+    "target_temperature_c": 25.0,
+    "mixing_time_s": 10.0,
+    "measurement_duration_s": 5.0,
+    "measurement_interval_ms": 1000
+  },
+  "achieved_parameters": {
+    "mean_temperature_c": 20.384999999999998,
+    "final_temperature_c": 20.77,
+    "fluorescence_raw_initial_au": 100.61,
+    "fluorescence_raw_final_au": 94.9,
+    "fluorescence_raw_slope_au_per_s": -1.1037142857142859,
+    "temperature_points": 6,
+    "fluorescence_points": 6
+  },
+  "stations_log": {
+    "station_1_preparation": {
+      "status": "OK",
+      "reagents_count": 1,
+      "mixing_time_s": 10.0,
+      "metadata": {
+        "station": "preparation",
+        "phase": "minimal_dummy"
+      }
+    },
+    "station_2_measurement": {
+      "status": "OK",
+      "data_points": 6
+    }
+  },
+  "simulation_seed": 42,
+  "calibration_loaded": false,
+  "output_files": [
+    "measurement.csv",
+    "hardware_protocol.json"
+  ]
+}

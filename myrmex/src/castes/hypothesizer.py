@@ -184,7 +184,7 @@ class HypothesizerCaste(BaseCaste):
 
         findings_text = "\n".join(f"- {f}" for f in findings)
 
-        # Prompt erstellen
+        # Prompt erstellen mit explizitem JSON-Schema
         prompt = f"""You are the Hypothesizer for an autonomous self-driving laboratory.
 Your task is to generate a scientific hypothesis based on the analysis findings
 and the current theory baseline.
@@ -202,6 +202,19 @@ Your task:
 4. Assess your confidence in the hypothesis.
 5. Provide a short summary (max. 200 characters).
 
+## IMPORTANT: Output Format
+You MUST respond with ONLY a JSON object. No markdown, no explanations, no code blocks.
+Use this exact JSON schema:
+
+{{
+  "root_cause_analysis": "Your analysis of the findings",
+  "proposed_adjustment": "Concrete parameter change suggestion",
+  "testable_prediction": "What you expect to observe",
+  "confidence": "high",
+  "summary": "Short summary max 200 chars"
+}}
+
+Remember: ONLY the JSON object. No other text.
 Be specific and actionable. Avoid vague statements like "further investigation needed".
 Instead, propose concrete parameter changes and measurable predictions.
 """
@@ -210,7 +223,8 @@ Instead, propose concrete parameter changes and measurable predictions.
             "You are the Hypothesizer for an autonomous self-driving laboratory. "
             "You generate scientific hypotheses based on experimental data and "
             "theoretical knowledge. Your hypotheses must be testable, specific, "
-            "and actionable. Avoid vague or generic statements."
+            "and actionable. You MUST respond with ONLY a valid JSON object. "
+            "No markdown, no explanations, no code blocks. Just the raw JSON object."
         )
 
         # LLM aufrufen (hier muss die ask_llm-Funktion verwendet werden)

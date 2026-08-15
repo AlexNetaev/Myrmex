@@ -207,6 +207,7 @@ class AnalystCaste(BaseCaste):
         sim_sample = self._format_sample(simulation, max_points=5) if simulation else "(no simulation data)"
         stats_text = "\n".join(f"  {k}: {v}" for k, v in stats.items())
 
+        # Prompt erstellen mit explizitem JSON-Schema
         prompt = f"""You are the Data Analyst for an autonomous self-driving laboratory.
 Your task is to interpret experimental data and extract scientifically meaningful findings.
 
@@ -238,6 +239,21 @@ Analyze the data and provide:
 4. A specific recommendation for the next experiment (which parameter to adjust and how).
 5. Your confidence level ('high', 'medium', 'low').
 
+## IMPORTANT: Output Format
+You MUST respond with ONLY a JSON object. No markdown, no explanations, no code blocks.
+Use this exact JSON schema:
+
+{{
+  "summary": "Short summary max 300 chars",
+  "key_findings": [
+    {{"category": "discrepancy", "description": "Finding description", "significance": "high"}}
+  ],
+  "scientific_interpretation": "Your scientific explanation",
+  "recommended_next_steps": "Specific parameter adjustment",
+  "confidence": "medium"
+}}
+
+Remember: ONLY the JSON object. No other text.
 Be specific, quantitative, and scientifically rigorous. Avoid vague statements.
 """
 
@@ -246,7 +262,9 @@ Be specific, quantitative, and scientifically rigorous. Avoid vague statements.
             "specializing in Fenton reaction kinetics and fluorescein photophysics. "
             "You interpret experimental data with scientific rigor, identifying "
             "discrepancies between simulation and reality, and providing actionable "
-            "recommendations for the next experiment."
+            "recommendations for the next experiment. You MUST respond with ONLY "
+            "a valid JSON object. No markdown, no explanations, no code blocks. "
+            "Just the raw JSON object."
         )
 
         # LLM aufrufen

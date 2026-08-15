@@ -171,13 +171,13 @@ class PlannerCaste(BaseCaste):
         else:
             hypotheses_text = "(no hypotheses available)"
 
-        prompt = f"""You are the Experiment Planner for an autonomous self-driving laboratory
-studying the Fenton reaction with fluorescein as a pH-sensitive fluorophore.
+        # WICHTIG: Explizites JSON-Schema im Prompt zeigen
+        prompt = f"""You are the Experiment Planner for an autonomous self-driving laboratory.
 
 ## Current Experiment Profile
 {params_text}
 
-## Recent Hypotheses (from HypothesizerCaste)
+## Recent Hypotheses
 {hypotheses_text}
 
 ## Current Theory Baseline
@@ -187,36 +187,37 @@ studying the Fenton reaction with fluorescein as a pH-sensitive fluorophore.
 {', '.join(VALID_PARAMETERS)}
 
 ## Your Task
-Plan the next experiment by:
-1. Choosing a strategy: 'ofat', 'doe', 'exploration', 'replication', or 'exploitation'
-2. Selecting ONE parameter to change (from the list above)
-3. Proposing a new value (physically plausible, within these bounds):
-   - ascorbic_acid_concentration_mm: 0.1-100 mM
-   - fecl3_concentration_mm: 0.01-10 mM
-   - h2o2_concentration_mm: 1-200 mM
-   - fluorescein_concentration_mm: 0.001-0.1 mM
-   - phosphate_buffer_concentration_mm: 1-200 mM
-   - target_temperature_c: 20-80°C
-   - mixing_speed_rpm: 100-1500
-   - mixing_time_s: 1-120 s
-   - heating_time_s: 5-300 s
-   - measurement_interval_ms: 100-5000 ms
-   - fluorescence_duration_s: 10-600 s
-4. Explaining WHY you chose this parameter and value
-5. Stating what you EXPECT to observe
-6. Assessing your confidence ('high', 'medium', 'low')
-7. Writing a short summary (max 200 characters)
+Plan the next experiment by choosing:
+1. A strategy: 'ofat', 'doe', 'exploration', 'replication', or 'exploitation'
+2. ONE parameter to change (from the list above)
+3. A new value (physically plausible)
+4. A reasoning for your choice
+5. An expected outcome
+6. Your confidence level ('high', 'medium', 'low')
+7. A short summary (max 200 characters)
 
-Be specific, quantitative, and scientifically rigorous. If a hypothesis suggests
-a specific parameter change, strongly consider following it. Otherwise, use
-scientific judgment to decide the most informative next step.
+## IMPORTANT: Output Format
+You MUST respond with ONLY a JSON object. No markdown, no explanations, no code blocks.
+Use this exact JSON schema:
+
+{{
+  "strategy": "exploration",
+  "parameter_to_change": "fecl3_concentration_mm",
+  "new_value": 0.1,
+  "reasoning": "Your scientific reasoning here",
+  "expected_outcome": "What you expect to observe",
+  "confidence": "medium",
+  "summary": "Short summary max 200 chars"
+}}
+
+Remember: ONLY the JSON object. No other text.
 """
 
         system_prompt = (
-            "You are the Experiment Planner for an autonomous self-driving laboratory "
-            "specializing in Fenton reaction kinetics. You plan scientifically rigorous "
-            "experiments based on hypotheses, current data, and theoretical knowledge. "
-            "Your plans must be specific, testable, and physically plausible."
+            "You are the Experiment Planner for an autonomous self-driving laboratory. "
+            "You plan scientifically rigorous experiments. You MUST respond with ONLY "
+            "a valid JSON object. No markdown, no explanations, no code blocks. "
+            "Just the raw JSON object."
         )
 
         # LLM aufrufen

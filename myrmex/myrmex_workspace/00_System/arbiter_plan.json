@@ -1,0 +1,14 @@
+{
+  "directive_summary": "# Myrmex Directive\n\n*(No directive set yet.)*",
+  "target_crystal_id": "",
+  "loop_priorities": [
+    "loop_b_experiment",
+    "loop_a_simulation",
+    "loop_c_knowledge",
+    "loop_d_coordination"
+  ],
+  "next_action": "explore",
+  "next_action_reasoning": "Landscape is sparse (0 trails, 0 crystals). Exploring to gather more data.",
+  "created_at": "2026-08-15T08:06:25.513073Z",
+  "revision_count": 31
+}

@@ -22,6 +22,7 @@ from pathlib import Path
 from src.castes.base_caste import BaseCaste, CasteExecutionResult
 from src.castes.hardware_profile import HardwareProfile, load_hardware_profile, find_active_profile
 from src.castes.hardware_profile import ReagentsConfig
+from src.castes.reagent_converter import convert_concentrations_to_reagents
 from src.models.caste import CasteName
 from src.models.pheromone import PheromoneType
 
@@ -399,7 +400,8 @@ class ExecutorCaste(BaseCaste):
     ) -> dict:
         """
         Baut den experiment.json-Payload aus dem experiment_profile.yaml.
-        Wendet dabei die Defaults aus dem Hardware-Profil an.
+        Wendet dabei die Defaults aus dem Hardware-Profil an und rechnet
+        Konzentrationen in Reagenzien-Volumina um.
         """
         parameters = dict(experiment_profile.get("parameters", {}))
         
@@ -408,10 +410,11 @@ class ExecutorCaste(BaseCaste):
             if key not in parameters:
                 parameters[key] = value
         
-        # Reagenzien-Format konvertieren (falls nötig)
-        if hardware_profile.experiment_schema.reagents_format == "list":
-            # Bereits im List-Format
-            pass
+        # WICHTIG: Konzentrationen → Reagenzien umrechnen
+        # Der Planner speichert Konzentrationen (z.B. fecl3_concentration_mm),
+        # aber die Hardware erwartet Reagenzien mit Volumina.
+        reagents = convert_concentrations_to_reagents(parameters)
+        parameters["reagents"] = reagents
         
         # station_4_action aus Defaults
         station_4_action = hardware_profile.defaults.get("station_4_action", "FLUORESCENCE")

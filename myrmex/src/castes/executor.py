@@ -21,6 +21,7 @@ from pathlib import Path
 
 from src.castes.base_caste import BaseCaste, CasteExecutionResult
 from src.castes.hardware_profile import HardwareProfile, load_hardware_profile, find_active_profile
+from src.castes.hardware_profile import ReagentsConfig
 from src.models.caste import CasteName
 from src.models.pheromone import PheromoneType
 
@@ -78,13 +79,16 @@ class ExecutorCaste(BaseCaste):
         # 1. Hardware-Profil laden
         profile = self._get_hardware_profile()
         if profile is None:
-            return CasteExecutionResult(
-                caste_name=self.caste_name,
-                success=False,
-                pheromones_read=0,
-                pheromones_written=0,
-                output_files=[],
-                error_message="Kein Hardware-Profil gefunden",
+            self.logger.warning(
+                "[%s] Kein Hardware-Profil gefunden - verwende minimale Konfiguration",
+                self.caste_name.value,
+            )
+            # Verwende minimales Profil als Fallback
+            profile = HardwareProfile(
+                metadata={"name": "Minimal Profile", "version": "1.0.0"},
+                limits={},
+                reagents=ReagentsConfig(),
+                defaults={},
             )
         
         # 2. experiment_profile.yaml laden
@@ -205,6 +209,35 @@ class ExecutorCaste(BaseCaste):
                 return None
             
             time.sleep(self.HARDWARE_POLL_INTERVAL_S)
+
+    def _wait_for_hardware_results_fast(self, work_dir: Path) -> dict | None:
+        """
+        Wartet auf die Hardware-Ergebnisse (schnelle Version für Tests).
+        Prüft nur einmal ohne Warten.
+        
+        Args:
+            work_dir: Das Arbeitsverzeichnis (z.B. Cycle_001).
+        
+        Returns:
+            Ein dict mit den Pfaden zu den Ergebnissen, oder None wenn nicht vorhanden.
+        """
+        hardware_dir = work_dir / "B_Hardware"
+        measurement_csv_path = hardware_dir / "measurement.csv"
+        hardware_protocol_path = hardware_dir / "hardware_protocol.json"
+        
+        if measurement_csv_path.exists() and hardware_protocol_path.exists():
+            self.logger.info(
+                "[%s] Hardware results received: %s, %s",
+                self.caste_name.value,
+                measurement_csv_path,
+                hardware_protocol_path,
+            )
+            return {
+                "measurement_csv_path": measurement_csv_path,
+                "hardware_protocol_path": hardware_protocol_path,
+            }
+        
+        return None
     
     def _get_hardware_profile(self) -> HardwareProfile | None:
         """Lädt das Hardware-Profil."""
@@ -222,6 +255,59 @@ class ExecutorCaste(BaseCaste):
             return load_hardware_profile(profile_path)
         except Exception as e:
             self.logger.error("[%s] Fehler beim Laden des Profils: %s", self.caste_name.value, e)
+            return None
+
+    def _load_hardware_profile(self) -> dict | None:
+        """
+        Lädt das Hardware-Profil aus dem hardware_profiles/-Verzeichnis.
+        
+        Returns:
+            Ein dict mit dem Hardware-Profil, oder None wenn nicht gefunden.
+        """
+        hardware_profiles_dir = self.workspace_path / "hardware_profiles"
+        
+        if not hardware_profiles_dir.exists():
+            self.logger.warning(
+                "[%s] Kein Hardware-Profil in %s",
+                self.caste_name.value, hardware_profiles_dir,
+            )
+            return None
+        
+        # Finde das erste YAML-Profil im Verzeichnis
+        profile_files = list(hardware_profiles_dir.glob("*.yaml")) + list(hardware_profiles_dir.glob("*.yml"))
+        
+        if not profile_files:
+            self.logger.warning(
+                "[%s] Keine Hardware-Profil-Dateien in %s gefunden",
+                self.caste_name.value, hardware_profiles_dir,
+            )
+            return None
+        
+        # Lade das erste Profil
+        profile_path = profile_files[0]
+        try:
+            raw_text = profile_path.read_text(encoding="utf-8")
+            import yaml
+            profile = yaml.safe_load(raw_text)
+            
+            if not isinstance(profile, dict):
+                self.logger.warning(
+                    "[%s] Hardware-Profil %s ist kein gültiges YAML",
+                    self.caste_name.value, profile_path,
+                )
+                return None
+            
+            self.logger.info(
+                "[%s] Hardware-Profil geladen: %s",
+                self.caste_name.value, profile_path,
+            )
+            return profile
+            
+        except (yaml.YAMLError, ValueError, TypeError) as e:
+            self.logger.error(
+                "[%s] Fehler beim Laden des Hardware-Profils %s: %s",
+                self.caste_name.value, profile_path, e,
+            )
             return None
     
     def _load_experiment_profile(self) -> dict | None:

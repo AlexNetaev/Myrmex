@@ -109,8 +109,8 @@ class TestPlannerExecution:
         
         result = planner.execute(work_dir)
         
-        assert "plan_description" in result.extra_data
-        assert len(result.extra_data["plan_description"]) > 0
+        assert "strategy" in result.extra_data
+        assert len(result.extra_data["strategy"]) > 0
     
     def test_handles_malformed_profile_gracefully(self, planner, temp_workspace):
         """Ein ungültiges Profil wird gracefully behandelt."""

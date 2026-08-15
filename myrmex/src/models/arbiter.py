@@ -55,3 +55,14 @@ class ArbiterPlan(BaseModel):
         default=0, ge=0,
         description="Wie oft dieser Plan bereits revidiert wurde"
     )
+
+
+class ArbiterCycleResult(BaseModel):
+    """Ergebnis eines vollständigen Arbiter-Zyklus."""
+    model_config = ConfigDict(extra="forbid")
+    
+    action: ArbiterActionType = Field(..., description="Die gewählte Aktion")
+    reasoning: str = Field(..., description="Die Begründung für die Aktion")
+    loop_name: LoopName = Field(..., description="Die ausgeführte Schleife")
+    loop_results: list = Field(default_factory=list, description="Die Ergebnisse der Schleifen-Ausführung")
+    landscape_summary: dict = Field(default_factory=dict, description="Zusammenfassung der Landschaft")

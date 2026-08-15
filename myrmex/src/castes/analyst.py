@@ -2,18 +2,17 @@
 src/castes/analyst.py
 Die Analyst-Kaste — wertet Messdaten aus und schreibt Erkenntnisse als Pheromone.
 
-In Phase 1 macht der Analyst deterministische Analyse (Statistik, Plateau-Erkennung).
-Keine LLM-Aufrufe — die kommen in späteren Phasen.
+In dieser Version nutzt sie ein LLM für die wissenschaftliche Interpretation.
+Die deterministische Logik bleibt als Fallback und Daten-Vorverarbeitung erhalten.
 
 Typische Aufgaben:
 - Messdaten aus CSV-Dateien lesen (measurement.csv, sim_data.csv)
 - Statistische Kennzahlen berechnen (Plateau, Slope, AUC, Min/Max/Mean)
+- LLM-basierte wissenschaftliche Interpretation der Daten
 - Analyse-Ergebnisse als TRAIL-Pheromone ins Feld schreiben
-- Detaillierte Ergebnisse als JSON-Datei speichern
 """
 from __future__ import annotations
 import csv
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -21,279 +20,357 @@ from typing import Any
 from src.castes.base_caste import BaseCaste, CasteExecutionResult
 from src.models.caste import CasteName
 from src.models.pheromone import PheromoneType
+from src.castes.analysis_models import AnalysisModel, AnalysisFinding
+
+
+logger = logging.getLogger("caste.analyst")
+
+# LLM-Konfiguration (identisch zu HypothesizerCaste)
+OLLAMA_MODEL = "gemma4:31b-cloud"
+OLLAMA_HOST = "http://localhost:11434"
+DEFAULT_TEMPERATURE = 0.2
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_CONTEXT_SIZE = 4096
 
 
 class AnalystCaste(BaseCaste):
     """
     Die Analyst-Kaste — wertet Messdaten aus und schreibt Erkenntnisse.
-    
-    In Phase 1: Deterministische Analyse (Statistik, Plateau-Erkennung).
-    Keine LLM-Aufrufe.
+
+    In dieser Version: LLM-basierte wissenschaftliche Interpretation mit
+    deterministischem Fallback und Daten-Vorverarbeitung.
     """
     
     caste_name = CasteName.ANALYST
     role = "Daten auswerten und Erkenntnisse extrahieren"
-    specialization = "Statistische Analyse von Zeitreihen-Daten"
+    specialization = "LLM-basierte Dateninterpretation mit deterministischem Fallback"
     reads_pheromones = []  # Liest nur Dateien, keine Pheromone
     writes_pheromones = [PheromoneType.TRAIL]  # Schreibt Analyse-Erkenntnisse
+    
+    MEASUREMENT_CSV_FILENAME = "measurement.csv"
+    SIM_DATA_CSV_FILENAME = "sim_data.csv"
     
     def execute(self, work_dir: Path) -> CasteExecutionResult:
         """
         Führt die Analyse aus:
-        1. Sucht nach CSV-Dateien im work_dir (measurement.csv, sim_data.csv)
-        2. Analysiert jede gefundene CSV-Datei
-        3. Schreibt Analyse-Ergebnisse als JSON
-        4. Schreibt ein TRAIL-Pheromon mit den Erkenntnissen
+        1. Liest measurement.csv und sim_data.csv.
+        2. Berechnet deterministische Kennzahlen (Statistik, Diskrepanzen).
+        3. Versucht die LLM-basierte Interpretation.
+        4. Falls LLM fehlschlägt: Verwendet deterministischen Fallback.
+        5. Schreibt ein TRAIL-Pheromon mit der Analyse.
         """
-        self.logger.info("[%s] Starting analysis in %s", self.caste_name.value, work_dir)
+        self.logger.info("[%s] Starting analysis", self.caste_name.value)
+
+        # 1. Daten laden
+        measurement_path = work_dir / "B_Hardware" / self.MEASUREMENT_CSV_FILENAME
+        simulation_path = work_dir / "A_Simulation" / self.SIM_DATA_CSV_FILENAME
         
-        # 1. CSV-Dateien finden
-        csv_files = self._find_csv_files(work_dir)
-        self.logger.info("[%s] Found %d CSV file(s): %s", 
-                        self.caste_name.value, len(csv_files), 
-                        [f.name for f in csv_files])
-        
-        if not csv_files:
-            self.logger.warning("[%s] No CSV files found in %s", 
-                              self.caste_name.value, work_dir)
+        measurement_data = self._load_csv(measurement_path)
+        simulation_data = self._load_csv(simulation_path)
+
+        if not measurement_data:
+            self.logger.info("[%s] No measurement data to analyze", self.caste_name.value)
             return CasteExecutionResult(
                 caste_name=self.caste_name,
                 success=True,
                 pheromones_read=0,
                 pheromones_written=0,
                 output_files=[],
-                extra_data={"reason": "no_csv_files_found"},
+                extra_data={"reason": "no_measurement_data"},
             )
-        
-        # 2. Jede CSV-Datei analysieren
-        all_analyses: dict[str, dict] = {}
-        output_files: list[str] = []
-        
-        for csv_file in csv_files:
-            analysis = self._analyze_csv_file(csv_file)
-            all_analyses[csv_file.name] = analysis
-            
-            # 3. Analyse-Ergebnis als JSON schreiben
-            result_filename = f"{csv_file.stem}_analysis.json"
-            result_path = work_dir / result_filename
-            result_path.write_text(
-                json.dumps(analysis, indent=2), 
-                encoding="utf-8"
+
+        # 2. Deterministische Kennzahlen berechnen (Vorverarbeitung für LLM)
+        stats = self._compute_statistics(measurement_data, simulation_data)
+
+        # 3. LLM-basierte Interpretation versuchen
+        analysis = None
+        llm_used = False
+        try:
+            analysis = self._analyze_with_llm(measurement_data, simulation_data, stats)
+            llm_used = True
+            self.logger.info("[%s] LLM-based analysis completed successfully", self.caste_name.value)
+        except Exception as e:
+            self.logger.warning(
+                "[%s] LLM-based analysis failed: %s. Falling back to deterministic logic.",
+                self.caste_name.value, e,
             )
-            output_files.append(result_filename)
-            self.logger.info("[%s] Wrote analysis to %s", 
-                           self.caste_name.value, result_path)
-        
-        # 4. TRAIL-Pheromon mit Zusammenfassung schreiben
-        summary = self._build_analysis_summary(all_analyses)
+
+        # 4. Fallback: Deterministische Analyse
+        if analysis is None:
+            analysis = self._analyze_deterministic(measurement_data, simulation_data, stats)
+            llm_used = False
+
+        # 5. TRAIL-Pheromon schreiben
+        finding_categories = [f["category"] for f in analysis.get("key_findings", [])]
         pheromone = self.write_pheromone(
             pheromone_type=PheromoneType.TRAIL,
-            content=summary,
-            tags=["analysis", "measurement"],
+            content=analysis["summary"],
+            tags=["analysis", "findings"] + finding_categories,
             strength=0.6,
-            relevance=0.7,
+            relevance=0.8,
         )
-        
+
         return CasteExecutionResult(
             caste_name=self.caste_name,
             success=True,
             pheromones_read=0,
             pheromones_written=1,
-            output_files=output_files,
+            output_files=[],
             extra_data={
-                "csv_files_analyzed": [f.name for f in csv_files],
-                "analyses": all_analyses,
+                "llm_used": llm_used,
+                "confidence": analysis.get("confidence", "unknown"),
+                "num_findings": len(analysis.get("key_findings", [])),
                 "pheromone_id": pheromone.id,
+                "statistics": stats,
             },
         )
-    
-    def _find_csv_files(self, work_dir: Path) -> list[Path]:
-        """
-        Sucht nach CSV-Dateien im work_dir.
-        Priorisiert: measurement.csv, sim_data.csv, dann alle anderen .csv
-        """
-        if not work_dir.exists():
+
+    def _load_csv(self, csv_path: Path) -> list[dict]:
+        """Lädt eine CSV-Datei als Liste von Dictionaries."""
+        if not csv_path.exists():
+            self.logger.info("[%s] CSV not found: %s", self.caste_name.value, csv_path)
             return []
-        
-        # Priorisierte Dateien
-        priority_names = ["measurement.csv", "sim_data.csv"]
-        priority_files = [work_dir / name for name in priority_names if (work_dir / name).exists()]
-        
-        # Alle anderen CSV-Dateien
-        all_csv = sorted(work_dir.glob("*.csv"))
-        other_csv = [f for f in all_csv if f.name not in priority_names]
-        
-        return priority_files + other_csv
-    
-    def _analyze_csv_file(self, csv_path: Path) -> dict[str, Any]:
-        """
-        Analysiert eine einzelne CSV-Datei und gibt statistische Kennzahlen zurück.
-        """
+
         try:
-            with csv_path.open("r", newline="", encoding="utf-8") as f:
+            with csv_path.open("r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
-                rows = list(reader)
-        except Exception as exc:
-            self.logger.error("[%s] Failed to read %s: %s", 
-                            self.caste_name.value, csv_path.name, exc)
-            return {"error": str(exc), "file": csv_path.name}
-        
-        if not rows:
-            return {"error": "empty_file", "file": csv_path.name, "row_count": 0}
-        
-        # Header extrahieren
-        headers = list(rows[0].keys())
-        
-        # Alle numerischen Spalten identifizieren
-        numeric_columns = self._find_numeric_columns(rows, headers)
-        
-        # Statistik pro numerischer Spalte
-        column_stats: dict[str, dict] = {}
-        for col in numeric_columns:
-            values = self._extract_numeric_values(rows, col)
-            if values:
-                column_stats[col] = self._compute_statistics(values)
-        
-        # Zeit-Spalte erkennen (time_ms, time_s, timestamp, etc.)
-        time_column = self._find_time_column(headers)
-        
-        # Plateau-Erkennung (für die letzte numerische Spalte)
-        plateau_analysis = None
-        if numeric_columns and len(rows) >= 10:
-            last_numeric_col = numeric_columns[-1]
-            values = self._extract_numeric_values(rows, last_numeric_col)
-            plateau_analysis = self._detect_plateau(values)
-        
-        return {
-            "file": csv_path.name,
-            "row_count": len(rows),
-            "column_count": len(headers),
-            "headers": headers,
-            "numeric_columns": numeric_columns,
-            "time_column": time_column,
-            "column_statistics": column_stats,
-            "plateau_analysis": plateau_analysis,
+                return list(reader)
+        except Exception as e:
+            self.logger.warning("[%s] Failed to read CSV %s: %s", self.caste_name.value, csv_path, e)
+            return []
+
+    def _compute_statistics(self, measurement: list[dict], simulation: list[dict]) -> dict:
+        """
+        Berechnet deterministische Kennzahlen als Vorverarbeitung für das LLM.
+        Diese Zahlen sind die "Fakten", die das LLM interpretieren soll.
+        """
+        stats: dict = {
+            "measurement_points": len(measurement),
+            "simulation_points": len(simulation),
+            "has_simulation": len(simulation) > 0,
         }
-    
-    def _find_numeric_columns(self, rows: list[dict], headers: list[str]) -> list[str]:
-        """Identifiziert alle Spalten, die numerische Werte enthalten."""
-        numeric_cols = []
-        if not rows:
-            return numeric_cols
-        
-        first_row = rows[0]
-        for header in headers:
+
+        # Fluoreszenz-Statistik (Messung)
+        if measurement and "fluorescence_au" in measurement[0]:
             try:
-                float(first_row[header])
-                numeric_cols.append(header)
+                fluor_values = [float(r.get("fluorescence_au", 0)) for r in measurement]
+                stats["meas_fluor_start"] = fluor_values[0]
+                stats["meas_fluor_end"] = fluor_values[-1]
+                stats["meas_fluor_min"] = min(fluor_values)
+                stats["meas_fluor_max"] = max(fluor_values)
+                stats["meas_fluor_mean"] = sum(fluor_values) / len(fluor_values)
+                stats["meas_fluor_delta"] = fluor_values[-1] - fluor_values[0]
             except (ValueError, TypeError):
-                continue
-        
-        return numeric_cols
-    
-    def _extract_numeric_values(self, rows: list[dict], column: str) -> list[float]:
-        """Extrahiert alle numerischen Werte aus einer Spalte."""
-        values = []
-        for row in rows:
+                pass
+
+        # Temperatur-Statistik (Messung)
+        if measurement and "temp_c" in measurement[0]:
             try:
-                val = float(row[column])
-                values.append(val)
-            except (ValueError, TypeError, KeyError):
-                continue
-        return values
-    
-    def _compute_statistics(self, values: list[float]) -> dict[str, float]:
-        """Berechnet statistische Kennzahlen für eine Liste von Werten."""
-        if not values:
-            return {}
-        
-        n = len(values)
-        sorted_vals = sorted(values)
-        mean_val = sum(values) / n
-        variance = sum((x - mean_val) ** 2 for x in values) / n
-        std_dev = variance ** 0.5
-        
-        # Area Under Curve (einfache Trapez-Regel)
-        auc = sum(values)  # Vereinfacht: Summe der Werte
-        
+                temp_values = [float(r.get("temp_c", 0)) for r in measurement]
+                stats["meas_temp_start"] = temp_values[0]
+                stats["meas_temp_end"] = temp_values[-1]
+                stats["meas_temp_mean"] = sum(temp_values) / len(temp_values)
+            except (ValueError, TypeError):
+                pass
+
+        # Fluoreszenz-Statistik (Simulation)
+        if simulation and "fluorescence_au" in simulation[0]:
+            try:
+                sim_fluor_values = [float(r.get("fluorescence_au", 0)) for r in simulation]
+                stats["sim_fluor_start"] = sim_fluor_values[0]
+                stats["sim_fluor_end"] = sim_fluor_values[-1]
+                stats["sim_fluor_delta"] = sim_fluor_values[-1] - sim_fluor_values[0]
+            except (ValueError, TypeError):
+                pass
+
+        # Diskrepanz zwischen Simulation und Realität
+        if "meas_fluor_delta" in stats and "sim_fluor_delta" in stats:
+            stats["discrepancy_delta"] = stats["meas_fluor_delta"] - stats["sim_fluor_delta"]
+            if stats["sim_fluor_delta"] != 0:
+                stats["discrepancy_percent"] = (
+                    stats["discrepancy_delta"] / abs(stats["sim_fluor_delta"]) * 100.0
+                )
+
+        return stats
+
+    def _analyze_with_llm(
+        self,
+        measurement: list[dict],
+        simulation: list[dict],
+        stats: dict,
+    ) -> dict:
+        """
+        Führt die LLM-basierte Datenanalyse durch.
+        """
+        # Daten kompakt darstellen (nur erste/letzte 5 Punkte + Statistik)
+        meas_sample = self._format_sample(measurement, max_points=5)
+        sim_sample = self._format_sample(simulation, max_points=5) if simulation else "(no simulation data)"
+        stats_text = "\n".join(f"  {k}: {v}" for k, v in stats.items())
+
+        prompt = f"""You are the Data Analyst for an autonomous self-driving laboratory.
+Your task is to interpret experimental data and extract scientifically meaningful findings.
+
+## Experimental Context
+The experiment studies the Fenton reaction with fluorescein as a pH-sensitive fluorophore.
+- Fluorescein fluorescence DECREASES as pH drops (protonation quenches fluorescence).
+- The Fenton reaction generates H+ ions, causing pH to drop over time.
+- Temperature accelerates the reaction kinetics.
+
+## Measurement Data (Reality)
+First/last 5 data points:
+{meas_sample}
+
+## Simulation Data (Digital Twin Prediction)
+First/last 5 data points:
+{sim_sample}
+
+## Precomputed Statistics
+{stats_text}
+
+## Your Task
+Analyze the data and provide:
+1. A short summary (max. 300 characters).
+2. A list of key findings (each with category and significance).
+   Categories: 'discrepancy', 'anomaly', 'plateau', 'trend', 'confirmation'
+   Significance: 'high', 'medium', 'low'
+3. A scientific interpretation explaining WHY the observed patterns occur,
+   based on Fenton chemistry and fluorescein photophysics.
+4. A specific recommendation for the next experiment (which parameter to adjust and how).
+5. Your confidence level ('high', 'medium', 'low').
+
+Be specific, quantitative, and scientifically rigorous. Avoid vague statements.
+"""
+
+        system_prompt = (
+            "You are the Data Analyst for an autonomous self-driving laboratory "
+            "specializing in Fenton reaction kinetics and fluorescein photophysics. "
+            "You interpret experimental data with scientific rigor, identifying "
+            "discrepancies between simulation and reality, and providing actionable "
+            "recommendations for the next experiment."
+        )
+
+        # LLM aufrufen
+        result = self.ask_llm(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            response_model=AnalysisModel,
+            max_retries=DEFAULT_MAX_RETRIES,
+            temperature=DEFAULT_TEMPERATURE,
+            context_size=DEFAULT_CONTEXT_SIZE,
+        )
+
+        # In dict umwandeln
         return {
-            "count": n,
-            "min": sorted_vals[0],
-            "max": sorted_vals[-1],
-            "mean": round(mean_val, 4),
-            "std_dev": round(std_dev, 4),
-            "median": round(sorted_vals[n // 2], 4),
-            "auc": round(auc, 4),
+            "summary": result.summary,
+            "key_findings": [f.model_dump() for f in result.key_findings],
+            "scientific_interpretation": result.scientific_interpretation,
+            "recommended_next_steps": result.recommended_next_steps,
+            "confidence": result.confidence,
         }
-    
-    def _find_time_column(self, headers: list[str]) -> str | None:
-        """Erkennt die Zeit-Spalte (time_ms, time_s, timestamp, etc.)."""
-        time_keywords = ["time_ms", "time_s", "timestamp", "time", "t"]
-        for header in headers:
-            if header.lower() in time_keywords:
-                return header
-        return None
-    
-    def _detect_plateau(self, values: list[float], tail_fraction: float = 0.2) -> dict[str, Any]:
+
+    def _analyze_deterministic(
+        self,
+        measurement: list[dict],
+        simulation: list[dict],
+        stats: dict,
+    ) -> dict:
         """
-        Erkennt, ob die Werte ein Plateau (Steady State) erreichen.
-        Prüft die letzten `tail_fraction` der Werte auf geringe Varianz.
+        Deterministischer Fallback für die Datenanalyse.
+        Nutzt einfache Heuristiken, um Erkenntnisse zu extrahieren.
         """
-        if len(values) < 10:
-            return {"detected": False, "reason": "too_few_values"}
-        
-        tail_size = max(1, int(len(values) * tail_fraction))
-        tail_values = values[-tail_size:]
-        
-        mean_val = sum(tail_values) / len(tail_values)
-        variance = sum((x - mean_val) ** 2 for x in tail_values) / len(tail_values)
-        std_dev = variance ** 0.5
-        
-        # Plateau erkannt, wenn Standardabweichung < 5% des Mittelwerts
-        threshold = abs(mean_val) * 0.05 if mean_val != 0 else 1.0
-        is_plateau = std_dev < threshold
-        
-        # Slope der letzten Werte (lineare Regression vereinfacht)
-        slope = self._estimate_slope(tail_values)
-        
+        findings: list[dict] = []
+
+        # Check 1: Fluoreszenz-Diskrepanz
+        if "discrepancy_percent" in stats:
+            disc = stats["discrepancy_percent"]
+            if abs(disc) > 20:
+                findings.append({
+                    "description": (
+                        f"Fluorescence delta discrepancy of {disc:.1f}% between "
+                        f"simulation ({stats.get('sim_fluor_delta', 0):.2f}) and "
+                        f"measurement ({stats.get('meas_fluor_delta', 0):.2f})."
+                    ),
+                    "category": "discrepancy",
+                    "significance": "high" if abs(disc) > 50 else "medium",
+                })
+            else:
+                findings.append({
+                    "description": (
+                        f"Fluorescence delta matches simulation within {abs(disc):.1f}%."
+                    ),
+                    "category": "confirmation",
+                    "significance": "medium",
+                })
+
+        # Check 2: Plateau-Erkennung
+        if "meas_fluor_delta" in stats and abs(stats["meas_fluor_delta"]) < 1.0:
+            findings.append({
+                "description": (
+                    f"Fluorescence plateau detected (delta = {stats['meas_fluor_delta']:.2f} a.u.). "
+                    f"System may have reached equilibrium."
+                ),
+                "category": "plateau",
+                "significance": "high",
+            })
+
+        # Check 3: Starker Trend
+        if "meas_fluor_delta" in stats and abs(stats["meas_fluor_delta"]) > 20:
+            direction = "decrease" if stats["meas_fluor_delta"] < 0 else "increase"
+            findings.append({
+                "description": (
+                    f"Strong fluorescence {direction} of {abs(stats['meas_fluor_delta']):.2f} a.u. "
+                    f"over the measurement period."
+                ),
+                "category": "trend",
+                "significance": "high",
+            })
+
+        # Fallback: Immer mindestens ein Finding
+        if not findings:
+            findings.append({
+                "description": (
+                    f"Analyzed {stats['measurement_points']} measurement points. "
+                    f"No significant patterns detected."
+                ),
+                "category": "confirmation",
+                "significance": "low",
+            })
+
+        # Zusammenfassung
+        high_sig = sum(1 for f in findings if f["significance"] == "high")
+        if high_sig > 0:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
+        summary = (
+            f"Analyzed {stats['measurement_points']} points: "
+            f"{len(findings)} findings ({high_sig} high significance). "
+            f"Primary: {findings[0]['description'][:150]}..."
+        )
+
         return {
-            "detected": is_plateau,
-            "tail_size": tail_size,
-            "tail_mean": round(mean_val, 4),
-            "tail_std_dev": round(std_dev, 4),
-            "tail_slope": round(slope, 6),
-            "threshold": round(threshold, 4),
+            "summary": summary,
+            "key_findings": findings,
+            "scientific_interpretation": "(deterministic fallback — no LLM interpretation available)",
+            "recommended_next_steps": "Repeat experiment or adjust one parameter to test sensitivity.",
+            "confidence": confidence,
         }
-    
-    def _estimate_slope(self, values: list[float]) -> float:
-        """Schätzt die Steigung der letzten Werte (vereinfachte lineare Regression)."""
-        n = len(values)
-        if n < 2:
-            return 0.0
-        
-        # Einfache Steigung: (letzter - erster) / n
-        return (values[-1] - values[0]) / n
-    
-    def _build_analysis_summary(self, all_analyses: dict[str, dict]) -> str:
-        """
-        Baut eine zusammenfassende Beschreibung der Analyse für das Pheromon.
-        """
-        parts = []
-        for filename, analysis in all_analyses.items():
-            if "error" in analysis:
-                parts.append(f"{filename}: Error - {analysis['error']}")
-                continue
-            
-            row_count = analysis.get("row_count", 0)
-            plateau = analysis.get("plateau_analysis")
-            
-            summary_line = f"{filename}: {row_count} rows"
-            if plateau and plateau.get("detected"):
-                tail_mean = plateau.get("tail_mean", "?")
-                summary_line += f", plateau detected (mean={tail_mean})"
-            elif plateau:
-                summary_line += ", no plateau"
-            
-            parts.append(summary_line)
-        
-        return " | ".join(parts)
+
+    def _format_sample(self, data: list[dict], max_points: int = 5) -> str:
+        """Formatiert eine Daten-Stichprobe für den LLM-Prompt."""
+        if not data:
+            return "(no data)"
+
+        if len(data) <= max_points * 2:
+            # Kleine Datei: alle Zeilen
+            lines = [", ".join(f"{k}={v}" for k, v in row.items()) for row in data]
+            return "\n".join(lines)
+
+        # Große Datei: erste und letzte max_points
+        first = data[:max_points]
+        last = data[-max_points:]
+        lines = [", ".join(f"{k}={v}" for k, v in row.items()) for row in first]
+        lines.append(f"... ({len(data) - 2 * max_points} points omitted) ...")
+        lines.extend([", ".join(f"{k}={v}" for k, v in row.items()) for row in last])
+        return "\n".join(lines)

@@ -1,0 +1,14 @@
+{
+    "job_id": "test_job_001",
+    "cycle_id": "Cycle_001",
+    "simulation_seed": 42,
+    "preparation_params": {
+        "reagents": [{"name": "Reagenz_A", "volume_ml": 1.0}],
+        "mixing_time_s": 10.0
+    },
+    "measurement_params": {
+        "duration_s": 5.0,
+        "interval_ms": 1000,
+        "target_temperature_c": 25.0
+    }
+}

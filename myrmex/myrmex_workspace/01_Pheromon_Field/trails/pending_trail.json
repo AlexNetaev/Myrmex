@@ -1,0 +1,15 @@
+{
+  "id": "pending_trail",
+  "type": "trail",
+  "strength": 0.5,
+  "age_cycles": 0,
+  "relevance": 0.7,
+  "content": "OFAT: ascorbic_acid_concentration_mm -> 30.0",
+  "tags": [
+    "plan",
+    "experiment",
+    "ofat"
+  ],
+  "source_agent": "planner",
+  "created_at": "2026-08-15T21:22:30.508478Z"
+}

@@ -1,0 +1,18 @@
+experiment_type: fenton_fluorescence
+ofat_state:
+  current_parameter_index: 0
+  iterations_completed: 0
+  parameter_sequence:
+  - ascorbic_acid_concentration_mm
+  - fecl3_concentration_mm
+  - h2o2_concentration_mm
+  - fluorescein_concentration_mm
+  - phosphate_buffer_concentration_mm
+  - target_temperature_c
+parameters:
+  ascorbic_acid_concentration_mm: 30.0
+  fecl3_concentration_mm: 1.0
+  fluorescein_concentration_mm: 0.01
+  h2o2_concentration_mm: 50.0
+  phosphate_buffer_concentration_mm: 50.0
+  target_temperature_c: 37.0

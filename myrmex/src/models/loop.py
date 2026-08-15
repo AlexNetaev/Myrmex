@@ -24,6 +24,14 @@ class LoopStatus(str, Enum):
     COMPLETED = "completed"  # Abgeschlossen
 
 
+class ActionType(str, Enum):
+    """Die möglichen Aktionstypen einer Schleife."""
+    MEASURE = "measure"           # Messung durchführen (+20 Energie)
+    SIMULATE = "simulate"         # Simulation ausführen (-5 Energie)
+    ANALYZE = "analyze"           # Daten analysieren (-10 Energie)
+    CONSOLIDATE = "consolidate"   # Wissen konsolidieren (-5 Energie)
+
+
 class LoopState(BaseModel):
     """
     Der Zustand einer Schleife. Wird in 05_Loops/<loop_name>.json gespeichert.
@@ -48,3 +56,27 @@ class LoopState(BaseModel):
         default=0, ge=0,
         description="Wie viele Iterationen diese Schleife bereits durchlaufen hat"
     )
+
+
+class LoopExecutionResult(BaseModel):
+    """Ergebnis einer einzelnen Schleifen-Ausführung."""
+    model_config = ConfigDict(extra="forbid")
+    
+    loop_name: LoopName = Field(..., description="Die ausgeführte Schleife")
+    action_type: str = Field(..., description="Der ausgeführte Aktionstyp")
+    energy_change: float = Field(..., description="Änderung der Energie (+ oder -)")
+    new_energy: float = Field(..., ge=0.0, le=100.0, description="Neue Energie der Schleife")
+    iteration_count: int = Field(..., ge=0, description="Neuer Iterationszähler der Schleife")
+
+
+class LoopCycleResult(BaseModel):
+    """Ergebnis eines vollständigen Loop-Zyklus."""
+    model_config = ConfigDict(extra="forbid")
+    
+    loop_executed: LoopName = Field(..., description="Die ausgeführte Schleife")
+    action_type: str = Field(..., description="Der ausgeführte Aktionstyp")
+    energy_before: float = Field(..., ge=0.0, le=100.0, description="Energie vor der Ausführung")
+    energy_after: float = Field(..., ge=0.0, le=100.0, description="Energie nach der Ausführung")
+    energy_change: float = Field(..., description="Änderung der Energie (+ oder -)")
+    iterations_total: int = Field(..., ge=0, description="Gesamtzahl der Iterationen aller Schleifen")
+    evaporation_stats: dict = Field(default_factory=dict, description="Statistiken von evaporate()")

@@ -8,10 +8,13 @@ in die Hardware-Queue.
 
 Der Executor ist rein deterministisch — kein LLM. Er ist eine reine
 Konvertierungs- und Validierungs-Kaste.
+
+Erweitert um Warten auf Hardware-Ergebnisse (Prompt 18b).
 """
 from __future__ import annotations
 import json
 import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,6 +51,10 @@ class ExecutorCaste(BaseCaste):
     EXPERIMENT_PROFILE_FILENAME = "experiment_profile.yaml"
     EXPERIMENT_JSON_FILENAME = "experiment.json"
     
+    # Timeout für das Warten auf Hardware-Ergebnisse
+    HARDWARE_WAIT_TIMEOUT_S = 300  # 5 Minuten
+    HARDWARE_POLL_INTERVAL_S = 1.0  # 1 Sekunde
+    
     def __init__(
         self,
         workspace_path: Path | None = None,
@@ -63,7 +70,8 @@ class ExecutorCaste(BaseCaste):
         2. Lädt das experiment_profile.yaml
         3. Validiert gegen das Hardware-Profil
         4. Schreibt experiment.json in die Hardware-Queue
-        5. Schreibt ein TRAIL-Pheromon mit der Bestätigung
+        5. Wartet auf die Hardware-Ergebnisse
+        6. Schreibt ein TRAIL-Pheromon mit der Bestätigung
         """
         self.logger.info("[%s] Starting execution", self.caste_name.value)
         
@@ -109,10 +117,29 @@ class ExecutorCaste(BaseCaste):
         job_payload = self._build_job_payload(experiment_profile, profile)
         queue_path = self._write_experiment_json(job_payload)
         
-        # 5. TRAIL-Pheromon schreiben
+        # 5. Warte auf Hardware-Ergebnisse
+        hardware_results = self._wait_for_hardware_results(work_dir)
+        
+        if hardware_results is None:
+            # Timeout oder Fehler
+            return CasteExecutionResult(
+                caste_name=self.caste_name,
+                success=False,
+                pheromones_read=0,
+                pheromones_written=0,
+                output_files=[],
+                error_message="Hardware did not produce results within timeout",
+                extra_data={"timeout_s": self.HARDWARE_WAIT_TIMEOUT_S},
+            )
+        
+        # 6. TRAIL-Pheromon schreiben
+        measurement_csv_path = hardware_results.get("measurement_csv_path")
+        hardware_protocol_path = hardware_results.get("hardware_protocol_path")
+        
+        summary = f"Hardware execution completed for {work_dir.name}"
         pheromone = self.write_pheromone(
             pheromone_type=PheromoneType.TRAIL,
-            content=f"Experiment {job_payload['job_id']} an Hardware übergeben",
+            content=summary,
             tags=["execution", "hardware"],
             strength=0.5,
             relevance=0.6,
@@ -123,13 +150,61 @@ class ExecutorCaste(BaseCaste):
             success=True,
             pheromones_read=0,
             pheromones_written=1,
-            output_files=[self.EXPERIMENT_JSON_FILENAME],
+            output_files=[
+                str(queue_path),
+                str(measurement_csv_path) if measurement_csv_path else "",
+                str(hardware_protocol_path) if hardware_protocol_path else "",
+            ],
             extra_data={
                 "job_id": job_payload["job_id"],
                 "queue_path": str(queue_path),
                 "pheromone_id": pheromone.id,
+                "measurement_csv_path": str(measurement_csv_path) if measurement_csv_path else None,
+                "hardware_protocol_path": str(hardware_protocol_path) if hardware_protocol_path else None,
             },
         )
+    
+    def _wait_for_hardware_results(self, work_dir: Path) -> dict | None:
+        """
+        Wartet auf die Hardware-Ergebnisse.
+        
+        Args:
+            work_dir: Das Arbeitsverzeichnis (z.B. Cycle_001).
+        
+        Returns:
+            Ein dict mit den Pfaden zu den Ergebnissen, oder None bei Timeout.
+        """
+        hardware_dir = work_dir / "B_Hardware"
+        measurement_csv_path = hardware_dir / "measurement.csv"
+        hardware_protocol_path = hardware_dir / "hardware_protocol.json"
+        
+        start_time = time.monotonic()
+        
+        while True:
+            # Prüfe ob beide Dateien existieren
+            if measurement_csv_path.exists() and hardware_protocol_path.exists():
+                self.logger.info(
+                    "[%s] Hardware results received: %s, %s",
+                    self.caste_name.value,
+                    measurement_csv_path,
+                    hardware_protocol_path,
+                )
+                return {
+                    "measurement_csv_path": measurement_csv_path,
+                    "hardware_protocol_path": hardware_protocol_path,
+                }
+            
+            # Prüfe Timeout
+            elapsed = time.monotonic() - start_time
+            if elapsed >= self.HARDWARE_WAIT_TIMEOUT_S:
+                self.logger.error(
+                    "[%s] Timeout waiting for hardware results (%.1fs)",
+                    self.caste_name.value,
+                    elapsed,
+                )
+                return None
+            
+            time.sleep(self.HARDWARE_POLL_INTERVAL_S)
     
     def _get_hardware_profile(self) -> HardwareProfile | None:
         """Lädt das Hardware-Profil."""

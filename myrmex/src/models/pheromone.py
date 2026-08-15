@@ -15,6 +15,19 @@ class PheromoneType(str, Enum):
     WARNING = "warning"   # 🔴 Negatives Signal
 
 
+class EvaporationResult(BaseModel):
+    """Statistiken nach einem Verdunstungszyklus."""
+    model_config = ConfigDict(extra="forbid")
+    
+    trails_evaporated: int = Field(default=0, ge=0)
+    warnings_evaporated: int = Field(default=0, ge=0)
+    crystals_unchanged: int = Field(default=0, ge=0)
+    trails_remaining: int = Field(default=0, ge=0)
+    warnings_remaining: int = Field(default=0, ge=0)
+    total_strength_before: float = Field(default=0.0, ge=0.0)
+    total_strength_after: float = Field(default=0.0, ge=0.0)
+
+
 class Pheromone(BaseModel):
     """
     Ein einzelnes Pheromon im Pheromon-Feld.

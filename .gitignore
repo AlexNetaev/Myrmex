@@ -2,11 +2,22 @@
 # Compiled Python files
 *.pyc
 __pycache__/
-
-# Dependencies
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.env
+.env.*
 .venv/
 venv/
-node_modules/
+ENV/
+env.bak/
+venv.bak/
+.python-version
 
 # Logs and temporary files
 *.log

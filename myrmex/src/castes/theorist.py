@@ -163,14 +163,30 @@ Your task is to consolidate new experimental findings into the theory baseline.
 5. Write a coherent, structured summary of the new knowledge to append to the baseline.
 6. Assess your confidence in the consolidation ('high', 'medium', 'low').
 
+## IMPORTANT: Output Format
+You MUST respond with ONLY a JSON object. No markdown, no explanations, no code blocks.
+Use this exact JSON schema:
+
+{{
+  "summary": "Short summary of the consolidation",
+  "new_knowledge": "Structured new knowledge to append",
+  "contradictions_resolved": [
+    {{"old_knowledge": "...", "new_knowledge": "...", "resolution": "..."}}
+  ],
+  "deprecated_knowledge": ["List of deprecated statements"],
+  "confidence": "high"
+}}
+
+Remember: ONLY the JSON object. No other text.
 Be scientifically rigorous. Use clear, precise language. Avoid vague statements.
 """
 
         system_prompt = (
             "You are the Theorist for an autonomous self-driving laboratory. "
             "You consolidate experimental findings into a coherent theory baseline, "
-            "resolving contradictions and maintaining scientific rigor. Your output "
-            "must be structured, precise, and actionable."
+            "resolving contradictions and maintaining scientific rigor. You MUST "
+            "respond with ONLY a valid JSON object. No markdown, no explanations, "
+            "no code blocks. Just the raw JSON object."
         )
 
         # LLM aufrufen

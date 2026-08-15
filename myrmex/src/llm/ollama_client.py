@@ -212,6 +212,11 @@ class OllamaClient:
             # Erste und letzte Zeile entfernen (```json und ```)
             json_text = "\n".join(lines[1:-1])
         
+        # WICHTIG: Fallback-Parser für Markdown-Format
+        if not json_text.startswith("{"):
+            # Versuche, JSON aus Markdown zu extrahieren
+            json_text = self._extract_json_from_markdown(response_text)
+        
         try:
             data = json.loads(json_text)
         except json.JSONDecodeError as e:
@@ -224,9 +229,78 @@ class OllamaClient:
         try:
             return response_model.model_validate(data)
         except ValidationError as e:
-            raise ValidationError(
+            raise OllamaResponseError(
                 f"Ollama response does not match {response_model.__name__}: {e}"
             ) from e
+
+    def _extract_json_from_markdown(self, markdown_text: str) -> str:
+        """
+        Extrahiert JSON aus Markdown-Format.
+        Dies ist ein Fallback für Modelle, die trotz JSON-Mode Markdown ausgeben.
+        
+        Unterstützt Formate wie:
+        - **Key:** Value
+        - Key: Value
+        """
+        import re
+        
+        # Mapping von Markdown-Keys zu JSON-Keys
+        key_mapping = {
+            "strategy": "strategy",
+            "parameter_to_change": "parameter_to_change",
+            "new_value": "new_value",
+            "reasoning": "reasoning",
+            "expected_outcome": "expected_outcome",
+            "confidence": "confidence",
+            "summary": "summary",
+            "root_cause_analysis": "root_cause_analysis",
+            "proposed_adjustment": "proposed_adjustment",
+            "testable_prediction": "testable_prediction",
+            "scientific_interpretation": "scientific_interpretation",
+            "recommended_next_steps": "recommended_next_steps",
+            "key_findings": "key_findings",
+            "new_knowledge": "new_knowledge",
+            "contradictions_resolved": "contradictions_resolved",
+            "deprecated_knowledge": "deprecated_knowledge",
+        }
+        
+        # Zuerst alle ** entfernen, um die Verarbeitung zu vereinfachen
+        cleaned_text = markdown_text.replace("**", "")
+        
+        # Muster 1: Key: Value (nachdem ** entfernt wurden)
+        pattern1 = re.compile(r"^([^:]+):\s*(.+)$", re.MULTILINE)
+        matches1 = pattern1.findall(cleaned_text)
+        
+        if matches1:
+            data = {}
+            for key, value in matches1:
+                # Key normalisieren
+                normalized_key = key.strip().lower().replace(" ", "_")
+                
+                # Key-Mapping anwenden
+                if normalized_key in key_mapping:
+                    normalized_key = key_mapping[normalized_key]
+                
+                # Value bereinigen
+                value = value.strip().strip('"').strip("'")
+                # Neue Zeilen entfernen
+                value = value.replace("\n", " ")
+                
+                # Versuche, numerische Werte zu konvertieren
+                try:
+                    if "." in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    pass
+                
+                data[normalized_key] = value
+            
+            return json.dumps(data)
+        
+        # Wenn kein Muster passt, leeres JSON zurückgeben
+        return "{}"
     
     def is_available(self) -> bool:
         """

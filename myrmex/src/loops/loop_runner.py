@@ -62,6 +62,7 @@ class LoopRunner:
         self.workspace_path: Path = (workspace_path or config.WORKSPACE_ROOT).resolve()
         self.loops_dir: Path = self.workspace_path / "05_Loops"
         self.pheromone_field = PheromoneField()
+        self.logger = logging.getLogger(__name__)
         
         # Schleifen-Zustände laden oder initialisieren
         self.loop_states: dict[LoopName, LoopState] = {}
@@ -211,52 +212,86 @@ class LoopRunner:
         """
         Führt eine einzelne Schleife aus.
         
-        In Phase 1 ist dies ein PLATZHALTER:
-        - Loggt die Ausführung
-        - Simuliert einen Aktionstyp basierend auf der Schleife:
-          - LOOP_A_SIMULATION → SIMULATE (-5 Energie)
-          - LOOP_B_EXPERIMENT → MEASURE (+20 Energie)
-          - LOOP_C_KNOWLEDGE → ANALYZE (-10 Energie)
-          - LOOP_D_COORDINATION → CONSOLIDATE (-5 Energie)
-        - Aktualisiert das Energie-Budget
-        - Inkrementiert iteration_count
+        Diese Methode:
+        1. Bestimmt den ActionType basierend auf der Schleife
+        2. Nutzt die Kasten-Registry, um die richtige Kaste zu finden
+        3. Führt die Kaste mit dem work_dir aus
+        4. Aktualisiert das Energie-Budget
+        5. Gibt das Ergebnis zurück
+        
+        Args:
+            loop_name: Die Schleife, die ausgeführt werden soll.
         
         Returns:
-            Ein LoopExecutionResult mit dem Aktionstyp und Energie-Änderung.
-        
-        Hinweis: In Phase 2+ werden hier die tatsächlichen Kasten aufgerufen
-        (z.B. Hypothesizer, Simulator, Analyst, etc.).
+            Ein LoopExecutionResult mit dem Aktionstyp und der Energie-Änderung.
         """
-        # Aktionstyp bestimmen
-        action_type = self.LOOP_ACTION_MAP.get(
-            loop_name, ActionType.CONSOLIDATE
+        from src.castes.registry import get_registry
+        
+        # 1. ActionType basierend auf der Schleife bestimmen
+        action_type = self._get_action_type_for_loop(loop_name)
+        
+        # 2. Kasten-Registry nutzen, um die richtige Kaste zu finden
+        registry = get_registry()
+        caste_class = registry.get_caste_for_action(action_type)
+        
+        # Prüfen, ob es ein Placeholder ist (für Logging)
+        is_placeholder = registry.is_placeholder(action_type)
+        
+        # 3. Kaste instantiieren und ausführen
+        caste = caste_class(workspace_path=self.workspace_path)
+        
+        # work_dir für die Kaste bestimmen
+        work_dir = self.workspace_path / "00_System"
+        work_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.logger.info(
+            "[LoopRunner] Executing %s via %s (placeholder=%s)",
+            loop_name.value,
+            caste_class.__name__,
+            is_placeholder,
         )
         
-        # Energie aktualisieren
-        old_state = self.loop_states[loop_name]
-        energy_before = old_state.energy
+        # Kaste ausführen
+        execution_result = caste.execute(work_dir=work_dir)
+        
+        # 4. Energie-Budget aktualisieren
+        energy_before = self.loop_states[loop_name].energy
         new_energy = self.update_energy(loop_name, action_type)
         energy_change = new_energy - energy_before
         
-        # Iterationszähler erhöhen
-        old_state.iteration_count += 1
-        old_state.energy = new_energy
-        old_state.last_activity = datetime.now(timezone.utc)
-        old_state.status = LoopStatus.ACTIVE
+        # Iterationszähler inkrementieren
+        self.loop_states[loop_name].iteration_count += 1
+        self.loop_states[loop_name].energy = new_energy
+        self.loop_states[loop_name].last_activity = datetime.now(timezone.utc)
+        self.loop_states[loop_name].status = LoopStatus.ACTIVE
         
-        logger.info(
-            "[LoopRunner] Loop %s executed action %s. Iteration #%d. Energy: %.1f → %.1f",
-            loop_name.value, action_type.value,
-            old_state.iteration_count, energy_before, new_energy,
-        )
-        
+        # 5. Ergebnis zurückgeben
         return LoopExecutionResult(
             loop_name=loop_name,
             action_type=action_type.value,
             energy_change=energy_change,
             new_energy=new_energy,
-            iteration_count=old_state.iteration_count,
+            iteration_count=self.loop_states[loop_name].iteration_count,
         )
+
+
+    def _get_action_type_for_loop(self, loop_name: LoopName) -> ActionType:
+        """
+        Bestimmt den ActionType basierend auf der Schleife.
+        
+        Mapping:
+        - LOOP_A_SIMULATION -> SIMULATE
+        - LOOP_B_EXPERIMENT -> MEASURE
+        - LOOP_C_KNOWLEDGE -> ANALYZE
+        - LOOP_D_COORDINATION -> CONSOLIDATE
+        """
+        loop_to_action = {
+            LoopName.LOOP_A_SIMULATION: ActionType.SIMULATE,
+            LoopName.LOOP_B_EXPERIMENT: ActionType.MEASURE,
+            LoopName.LOOP_C_KNOWLEDGE: ActionType.ANALYZE,
+            LoopName.LOOP_D_COORDINATION: ActionType.CONSOLIDATE,
+        }
+        return loop_to_action[loop_name]
     
     def update_energy(self, loop_name: LoopName, action_type: ActionType) -> float:
         """

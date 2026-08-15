@@ -216,7 +216,7 @@ class LoopRunner:
         Diese Methode:
         1. Bestimmt den ActionType basierend auf der Schleife
         2. Nutzt die Kasten-Registry, um die richtige Kaste zu finden
-        3. Führt die Kaste mit dem work_dir aus
+        3. Führt die Kaste mit dem work_dir aus (Zyklus-Verzeichnis!)
         4. Aktualisiert das Energie-Budget
         5. Gibt das Ergebnis zurück
         
@@ -241,15 +241,16 @@ class LoopRunner:
         # 3. Kaste instantiieren und ausführen
         caste = caste_class(workspace_path=self.workspace_path)
         
-        # work_dir für die Kaste bestimmen
-        work_dir = self.workspace_path / "00_System"
+        # WICHTIG: work_dir ist jetzt ein Zyklus-Verzeichnis, nicht 00_System!
+        work_dir = self._get_work_dir()
         work_dir.mkdir(parents=True, exist_ok=True)
         
         self.logger.info(
-            "[LoopRunner] Executing %s via %s (placeholder=%s)",
+            "[LoopRunner] Executing %s via %s (placeholder=%s, work_dir=%s)",
             loop_name.value,
             caste_class.__name__,
             is_placeholder,
+            work_dir,
         )
         
         # Kaste ausführen
@@ -274,6 +275,37 @@ class LoopRunner:
             new_energy=new_energy,
             iteration_count=self.loop_states[loop_name].iteration_count,
         )
+
+    def _get_work_dir(self) -> Path:
+        """
+        Gibt das aktuelle Arbeitsverzeichnis zurück.
+        
+        Sucht im 02_Research_Cycles/-Verzeichnis nach dem neuesten Zyklus.
+        Falls kein Zyklus existiert, wird Cycle_001 erstellt.
+        
+        Returns:
+            Das Path-Objekt des Zyklus-Verzeichnisses.
+        """
+        cycles_dir = self.workspace_path / "02_Research_Cycles"
+        cycles_dir.mkdir(parents=True, exist_ok=True)
+        
+        existing_cycles = sorted(
+            [d for d in cycles_dir.iterdir() if d.is_dir() and d.name.startswith("Cycle_")],
+            key=lambda d: d.name,
+        )
+        
+        if existing_cycles:
+            return existing_cycles[-1]
+        
+        # Neuen Zyklus erstellen
+        new_cycle = cycles_dir / "Cycle_001"
+        new_cycle.mkdir(parents=True, exist_ok=True)
+        (new_cycle / "A_Simulation").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "B_Hardware").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "C_Analysis").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "D_Shadow_Memory").mkdir(parents=True, exist_ok=True)
+        
+        return new_cycle
 
 
     def _get_action_type_for_loop(self, loop_name: LoopName) -> ActionType:

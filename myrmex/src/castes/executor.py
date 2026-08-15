@@ -184,17 +184,57 @@ class ExecutorCaste(BaseCaste):
             },
         )
     
+    def _get_current_cycle_id(self) -> str:
+        """
+        Bestimmt die aktuelle Cycle-ID.
+        
+        Sucht im 02_Research_Cycles/-Verzeichnis nach dem neuesten Zyklus.
+        Falls kein Zyklus existiert, wird Cycle_001 erstellt.
+        
+        Returns:
+            Die Cycle-ID als String (z.B. "Cycle_001").
+        """
+        cycles_dir = self.workspace_path / "02_Research_Cycles"
+        cycles_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Bestehende Zyklen finden
+        existing_cycles = sorted(
+            [d for d in cycles_dir.iterdir() if d.is_dir() and d.name.startswith("Cycle_")],
+            key=lambda d: d.name,
+        )
+        
+        if existing_cycles:
+            # Letzter Zyklus verwenden
+            return existing_cycles[-1].name
+        
+        # Neuen Zyklus erstellen
+        new_cycle = cycles_dir / "Cycle_001"
+        new_cycle.mkdir(parents=True, exist_ok=True)
+        (new_cycle / "A_Simulation").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "B_Hardware").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "C_Analysis").mkdir(parents=True, exist_ok=True)
+        (new_cycle / "D_Shadow_Memory").mkdir(parents=True, exist_ok=True)
+        
+        return "Cycle_001"
+
     def _wait_for_hardware_results(self, work_dir: Path) -> dict | None:
         """
         Wartet auf die Hardware-Ergebnisse.
         
+        WICHTIG: Die Ergebnisse werden im Cycle-Verzeichnis gesucht,
+        nicht im work_dir.
+        
         Args:
-            work_dir: Das Arbeitsverzeichnis (z.B. Cycle_001).
+            work_dir: Das Arbeitsverzeichnis (wird ignoriert, da wir den
+                      aktuellen Zyklus verwenden).
         
         Returns:
             Ein dict mit den Pfaden zu den Ergebnissen, oder None bei Timeout.
         """
-        hardware_dir = work_dir / "B_Hardware"
+        # Cycle-ID bestimmen und Hardware-Verzeichnis finden
+        cycle_id = self._get_current_cycle_id()
+        hardware_dir = self.workspace_path / "02_Research_Cycles" / cycle_id / "B_Hardware"
+        
         measurement_csv_path = hardware_dir / "measurement.csv"
         hardware_protocol_path = hardware_dir / "hardware_protocol.json"
         
@@ -456,11 +496,15 @@ class ExecutorCaste(BaseCaste):
         station_4_action = hardware_profile.defaults.get("station_4_action", "FLUORESCENCE")
         
         # Job-ID generieren
+        import uuid
         job_id = f"myrmex_{uuid.uuid4().hex[:8]}"
+        
+        # Cycle-ID bestimmen (nicht aus dem Profil, sondern vom Workspace-Zustand)
+        cycle_id = self._get_current_cycle_id()
         
         return {
             "job_id": job_id,
-            "cycle_id": experiment_profile.get("cycle_id", "unknown"),
+            "cycle_id": cycle_id,
             "parameters": parameters,
             "station_4_action": station_4_action,
             "created_at": datetime.now(timezone.utc).isoformat(),

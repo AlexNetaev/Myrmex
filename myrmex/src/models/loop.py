@@ -32,6 +32,8 @@ class ActionType(str, Enum):
     CONSOLIDATE = "consolidate"   # Wissen konsolidieren (-5 Energie)
     VALIDATE = "validate"         # Wissen validieren (Guardian)
     ARCHIVE = "archive"           # Wissen archivieren (Archivist)
+    HYPOTHESIZE = "hypothesize"   # Hypothesen generieren (Hypothesizer)
+    PLAN = "plan"                 # Experimente planen (Planner)
 
 
 class LoopState(BaseModel):

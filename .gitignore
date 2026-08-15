@@ -1,10 +1,30 @@
 ```
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
+env/
+venv/
+.venv/
+.ENV
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Build and distribution artifacts
 build/
 develop-eggs/
 dist/
@@ -22,31 +42,18 @@ wheels/
 *.egg
 
 # Testing
+.tests/
 .pytest_cache/
-.coverage
-htmlcov/
-coverage/
-
-# Virtual environments
-venv/
-.venv/
-.env
-.env.local
-.env.
+.coverage/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
 ```

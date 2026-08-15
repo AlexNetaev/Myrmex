@@ -140,6 +140,16 @@ class TestEndToEndIntegration:
         from src.castes.guardian import GuardianCaste
         assert registry.get_caste_for_action(ActionType.VALIDATE) == GuardianCaste
     
+    def test_registry_returns_hypothesizer_and_planner(self, integration_workspace):
+        """Testet, dass die Registry Hypothesizer und Planner zurückgibt."""
+        registry = get_registry()
+        
+        from src.castes.hypothesizer import HypothesizerCaste
+        assert registry.get_caste_for_action(ActionType.HYPOTHESIZE) == HypothesizerCaste
+        
+        from src.castes.planner import PlannerCaste
+        assert registry.get_caste_for_action(ActionType.PLAN) == PlannerCaste
+    
     def test_energy_budget_updates_correctly(self, integration_workspace):
         """
         Testet, dass das Energie-Budget korrekt aktualisiert wird.

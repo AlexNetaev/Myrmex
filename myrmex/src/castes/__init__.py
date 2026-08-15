@@ -13,8 +13,9 @@ from .executor import ExecutorCaste
 from .simulator import SimulatorCaste
 from .theorist import TheoristCaste
 from .guardian import GuardianCaste
+from .hypothesizer import HypothesizerCaste
 from . import sim_models
-from .registry import CasteRegistry, get_registry
+from .registry import CasteRegistry, get_registry, reset_registry
 from .ofat import create_baseline_profile, next_ofat_step, get_current_parameter_name
 from .hardware_profile import load_hardware_profile, find_active_profile, HardwareProfile
 
@@ -27,9 +28,11 @@ __all__ = [
     "SimulatorCaste",
     "TheoristCaste",
     "GuardianCaste",
+    "HypothesizerCaste",
     "sim_models",
     "CasteRegistry",
     "get_registry",
+    "reset_registry",
     "create_baseline_profile",
     "next_ofat_step",
     "get_current_parameter_name",

@@ -14,10 +14,19 @@ import yaml
 
 from src.arbiter.arbiter import Arbiter
 from src.loops.loop_runner import LoopRunner
-from src.castes.registry import get_registry
+from src.castes.registry import get_registry, reset_registry
 from src.models.loop import LoopName, ActionType
 from src.models.pheromone import PheromoneType
 from src.pheromones.pheromone_field import PheromoneField
+
+
+@pytest.fixture(autouse=True)
+def reset_registry_before_each_test():
+    """Setzt die Registry vor jedem Test zurück für Test-Isolation."""
+    reset_registry()
+    yield
+    # Optional: Auch nach dem Test zurücksetzen
+    reset_registry()
 
 
 @pytest.fixture

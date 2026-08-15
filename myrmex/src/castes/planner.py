@@ -171,7 +171,7 @@ class PlannerCaste(BaseCaste):
         else:
             hypotheses_text = "(no hypotheses available)"
 
-        # WICHTIG: Explizites JSON-Schema im Prompt zeigen
+        # WICHTIG: Explizites JSON-Schema im Prompt zeigen + Parameter-Grenzen
         prompt = f"""You are the Experiment Planner for an autonomous self-driving laboratory.
 
 ## Current Experiment Profile
@@ -186,11 +186,25 @@ class PlannerCaste(BaseCaste):
 ## Available Parameters to Adjust
 {', '.join(VALID_PARAMETERS)}
 
+## IMPORTANT: Parameter Bounds
+You MUST respect these physical bounds:
+- ascorbic_acid_concentration_mm: 0.1 to 100.0 mM
+- fecl3_concentration_mm: 0.01 to 10.0 mM (NOT higher than 10!)
+- h2o2_concentration_mm: 1.0 to 200.0 mM
+- fluorescein_concentration_mm: 0.001 to 0.1 mM
+- phosphate_buffer_concentration_mm: 1.0 to 200.0 mM
+- target_temperature_c: 20.0 to 80.0 °C
+- mixing_speed_rpm: 100 to 1500
+- mixing_time_s: 1.0 to 120.0 s
+- heating_time_s: 5.0 to 300.0 s
+- measurement_interval_ms: 100 to 5000 ms
+- fluorescence_duration_s: 10.0 to 600.0 s
+
 ## Your Task
 Plan the next experiment by choosing:
 1. A strategy: 'ofat', 'doe', 'exploration', 'replication', or 'exploitation'
 2. ONE parameter to change (from the list above)
-3. A new value (physically plausible)
+3. A new value WITHIN THE BOUNDS (physically plausible)
 4. A reasoning for your choice
 5. An expected outcome
 6. Your confidence level ('high', 'medium', 'low')

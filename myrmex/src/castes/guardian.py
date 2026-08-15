@@ -182,8 +182,21 @@ class GuardianCaste(BaseCaste):
                 continue
         
         # Muster 2: Effizienz oder Ausbeute über 100%
-        efficiency_pattern = re.compile(r"(\d+\.?\d*)\s*%\s*(?:efficiency|yield|ausbeute|wirkungsgrad)", re.IGNORECASE)
-        for match in efficiency_pattern.finditer(content_lower):
+        # Suche sowohl "150% efficiency" als auch "efficiency is 150%"
+        efficiency_pattern_after = re.compile(r"(\d+\.?\d*)\s*%\s*(?:efficiency|yield|ausbeute|wirkungsgrad)", re.IGNORECASE)
+        efficiency_pattern_before = re.compile(r"(?:efficiency|yield|ausbeute|wirkungsgrad).*?(\d+\.?\d*)\s*%", re.IGNORECASE)
+        
+        for match in efficiency_pattern_after.finditer(content_lower):
+            try:
+                value = float(match.group(1))
+                if value > 100.0:
+                    violations.append(
+                        f"Implausible efficiency/yield value {value}% (above 100%)"
+                    )
+            except (ValueError, AttributeError):
+                continue
+        
+        for match in efficiency_pattern_before.finditer(content_lower):
             try:
                 value = float(match.group(1))
                 if value > 100.0:

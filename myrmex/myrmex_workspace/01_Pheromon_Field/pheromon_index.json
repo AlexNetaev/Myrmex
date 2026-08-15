@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-08-15T08:40:49.802616Z",
+  "last_updated": "2026-08-15T08:55:55.515343Z",
   "total_count": 1,
   "pheromones": [
     {
@@ -11,7 +11,7 @@
       "relevance": 1.0,
       "tags": [],
       "source_agent": "test",
-      "created_at": "2026-08-15T08:40:49.797927Z",
+      "created_at": "2026-08-15T08:55:55.510747Z",
       "file_path": "trails/trail_test.json"
     }
   ]

@@ -27,6 +27,7 @@ from src.castes.simulator import SimulatorCaste
 from src.castes.theorist import TheoristCaste
 from src.castes.guardian import GuardianCaste
 from src.castes.hypothesizer import HypothesizerCaste
+from src.castes.planner import PlannerCaste
 from src.castes.archivist import ArchivistCaste
 
 logger = logging.getLogger("castes.registry")
@@ -74,6 +75,12 @@ class CasteRegistry:
         
         # ArchivistCaste jetzt implementiert
         self.register(ActionType.ARCHIVE, ArchivistCaste)
+        
+        # HypothesizerCaste registrieren
+        self.register(ActionType.HYPOTHESIZE, HypothesizerCaste)
+        
+        # PlannerCaste registrieren
+        self.register(ActionType.PLAN, PlannerCaste)
         
         logger.info(
             "CasteRegistry initialized with %d action types (%d placeholders)",

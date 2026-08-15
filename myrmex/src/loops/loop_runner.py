@@ -20,6 +20,7 @@ from src.models.loop import (
 )
 from src.models.arbiter import ArbiterPlan
 from src.pheromones.pheromone_field import PheromoneField, EvaporationResult
+from src.loops.loop_definitions import get_loop_definition
 
 logger = logging.getLogger(__name__)
 
@@ -348,3 +349,105 @@ class LoopRunner:
         except (json.JSONDecodeError, Exception) as exc:
             logger.error("[LoopRunner] Failed to load arbiter plan: %s", exc)
             return None
+    
+    def run_full_loop(self, loop_name: LoopName) -> list[LoopExecutionResult]:
+        """
+        Führt eine vollständige Schleife aus: alle ActionTypes in Sequenz.
+        
+        Args:
+            loop_name: Der Name der Schleife.
+        
+        Returns:
+            Eine Liste von LoopExecutionResults, eines pro ActionType.
+        """
+        action_sequence = get_loop_definition(loop_name)
+        
+        if not action_sequence:
+            self.logger.warning(
+                "[LoopRunner] Loop %s has no action sequence defined", loop_name.value
+            )
+            return []
+        
+        results: list[LoopExecutionResult] = []
+        
+        for action_type in action_sequence:
+            # Prüfe, ob die Schleife noch genug Energie hat
+            current_energy = self.loop_states[loop_name].energy
+            if current_energy <= 0:
+                self.logger.warning(
+                    "[LoopRunner] Loop %s has no energy left (%.1f), stopping early",
+                    loop_name.value, current_energy
+                )
+                break
+            
+            # Führe die einzelne Aktion mit dem spezifischen ActionType aus
+            result = self.execute_loop_with_action(loop_name, action_type)
+            results.append(result)
+            
+            # Prüfe, ob die Kaste erfolgreich war
+            if not result:
+                self.logger.warning(
+                    "[LoopRunner] Action %s in loop %s failed, stopping early",
+                    action_type.value, loop_name.value
+                )
+                break
+        
+        return results
+    
+    def execute_loop_with_action(self, loop_name: LoopName, action_type: ActionType) -> LoopExecutionResult:
+        """
+        Führt eine Schleife mit einem spezifischen ActionType aus.
+        
+        Args:
+            loop_name: Die Schleife, die ausgeführt werden soll.
+            action_type: Der ActionType, der ausgeführt werden soll.
+        
+        Returns:
+            Ein LoopExecutionResult mit dem Aktionstyp und der Energie-Änderung.
+        """
+        from src.castes.registry import get_registry
+        
+        # Kasten-Registry nutzen, um die richtige Kaste zu finden
+        registry = get_registry()
+        caste_class = registry.get_caste_for_action(action_type)
+        
+        # Prüfen, ob es ein Placeholder ist (für Logging)
+        is_placeholder = registry.is_placeholder(action_type)
+        
+        # Kaste instantiieren und ausführen
+        caste = caste_class(workspace_path=self.workspace_path)
+        
+        # work_dir für die Kaste bestimmen
+        work_dir = self.workspace_path / "00_System"
+        work_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.logger.info(
+            "[LoopRunner] Executing %s via %s (action=%s, placeholder=%s)",
+            loop_name.value,
+            caste_class.__name__,
+            action_type.value,
+            is_placeholder,
+        )
+        
+        # Kaste ausführen
+        execution_result = caste.execute(work_dir=work_dir)
+        
+        # Energie-Budget aktualisieren
+        energy_before = self.loop_states[loop_name].energy
+        new_energy = self.update_energy(loop_name, action_type)
+        energy_change = new_energy - energy_before
+        
+        # Iterationszähler inkrementieren
+        self.loop_states[loop_name].iteration_count += 1
+        self.loop_states[loop_name].energy = new_energy
+        self.loop_states[loop_name].last_activity = datetime.now(timezone.utc)
+        self.loop_states[loop_name].status = LoopStatus.ACTIVE
+        
+        # Ergebnis zurückgeben
+        return LoopExecutionResult(
+            loop_name=loop_name,
+            action_type=action_type.value,
+            energy_change=energy_change,
+            new_energy=new_energy,
+            iteration_count=self.loop_states[loop_name].iteration_count,
+        )

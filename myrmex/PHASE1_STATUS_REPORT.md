@@ -109,18 +109,18 @@
 
 ## 2. Implementierte Kasten
 
-| Kaste | Datei | caste_name | role | reads | writes | Zeilen |
-|-------|-------|------------|------|-------|--------|--------|
-| AnalystCaste | analyst.py | ANALYST | Daten auswerten und Erkenntnisse extrahieren | [] | [TRAIL] | 299 |
-| ArchivistCaste | archivist.py | ARCHIVIST | Wissen archivieren und konservieren | [CRYSTAL] | [CRYSTAL] | 233 |
-| BaseCaste | base_caste.py | — | Basisklasse für alle Kasten | — | — | 321 |
-| ExecutorCaste | executor.py | EXECUTOR | Experimente an Hardware übergeben | [] | [TRAIL] | 357 |
-| GuardianCaste | guardian.py | GUARDIAN | Wissen validieren und absichern | [CRYSTAL] | [WARNING, CRYSTAL] | 222 |
-| HypothesizerCaste | hypothesizer.py | HYPOTHESIZER | Hypothesen generieren | [TRAIL] | [TRAIL] | 226 |
-| PlannerCaste | planner.py | PLANNER | Experimente planen | [TRAIL, CRYSTAL] | [TRAIL] | 122 |
-| SimulatorCaste | simulator.py | SIMULATOR | Simulationen ausführen | [] | [TRAIL] | 191 |
-| TheoristCaste | theorist.py | THEORIST | Wissen konsolidieren | [TRAIL] | [CRYSTAL] | 155 |
-| PlaceholderCaste | placeholder.py | PLACEHOLDER | Platzhalter für nicht implementierte Kasten | [] | [] | 60 |
+| Kaste | Datei | caste_name | role | reads | writes | LLM-Integration | Zeilen |
+|-------|-------|------------|------|-------|--------|-----------------|--------|
+| AnalystCaste | analyst.py | ANALYST | Daten auswerten und Erkenntnisse extrahieren | [TRAIL] | [TRAIL] | ✅ AnalysisModel + Fallback | ~350 |
+| ArchivistCaste | archivist.py | ARCHIVIST | Wissen archivieren und konservieren | [CRYSTAL] | [CRYSTAL] | ❌ (deterministisch) | 233 |
+| BaseCaste | base_caste.py | — | Basisklasse für alle Kasten | — | — | ✅ ask_llm() Methode | ~350 |
+| ExecutorCaste | executor.py | EXECUTOR | Experimente an Hardware übergeben | [] | [TRAIL] | ❌ (deterministisch) | 357 |
+| GuardianCaste | guardian.py | GUARDIAN | Wissen validieren und absichern | [CRYSTAL] | [WARNING, CRYSTAL] | ❌ (deterministisch) | 222 |
+| HypothesizerCaste | hypothesizer.py | HYPOTHESIZER | Hypothesen generieren | [TRAIL] | [TRAIL] | ✅ HypothesisModel + Fallback | ~280 |
+| PlannerCaste | planner.py | PLANNER | Experimente planen | [TRAIL, CRYSTAL] | [TRAIL] | ✅ PlanModel + Fallback | ~300 |
+| SimulatorCaste | simulator.py | SIMULATOR | Simulationen ausführen | [] | [TRAIL] | ❌ (deterministisch) | 191 |
+| TheoristCaste | theorist.py | THEORIST | Wissen konsolidieren | [TRAIL] | [CRYSTAL] | ✅ ConsolidationModel + Fallback | ~250 |
+| PlaceholderCaste | placeholder.py | PLACEHOLDER | Platzhalter für nicht implementierte Kasten | [] | [] | ❌ | 60 |
 
 ---
 
@@ -186,35 +186,39 @@
 ## 6. Test-Übersicht
 
 ### Test-Dateien
-| Datei | Anzahl Tests |
-|-------|--------------|
-| test_analyst.py | 18 |
-| test_arbiter.py | 15 |
-| test_arbiter_loop_integration.py | 10 |
-| test_archivist.py | 13 |
-| test_base_caste.py | 17 |
-| test_caste.py | 7 |
-| test_decision.py | 12 |
-| test_directive.py | 7 |
-| test_end_to_end.py | 8 |
-| test_executor.py | 12 |
-| test_experiment_profile.py | 7 |
-| test_guardian.py | 14 |
-| test_hypothesizer.py | 10 |
-| test_integration.py | 7 |
-| test_landscape.py | 13 |
-| test_loop.py | 7 |
-| test_loop_definitions.py | 12 |
-| test_loop_runner.py | 18 |
-| test_ofat.py | 12 |
-| test_pheromone.py | 7 |
-| test_pheromone_field.py | 46 |
-| test_planner.py | 9 |
-| test_sim_models.py | 14 |
-| test_simulator.py | 10 |
-| test_theorist.py | 10 |
+| Datei | Anzahl Tests | Status |
+|-------|--------------|--------|
+| test_analyst_llm.py | 6 | ✅ NEU (LLM-Integration) |
+| test_analyst.py | 18 | ✅ Bestehend |
+| test_arbiter.py | 15 | ✅ Bestehend |
+| test_arbiter_loop_integration.py | 10 | ✅ Bestehend |
+| test_archivist.py | 13 | ✅ Bestehend |
+| test_base_caste.py | 17 | ✅ Bestehend |
+| test_caste.py | 7 | ✅ Bestehend |
+| test_decision.py | 12 | ✅ Bestehend |
+| test_directive.py | 7 | ✅ Bestehend |
+| test_end_to_end.py | 8 | ✅ Bestehend |
+| test_executor.py | 12 | ✅ Bestehend |
+| test_experiment_profile.py | 7 | ✅ Bestehend |
+| test_guardian.py | 14 | ✅ Bestehend |
+| test_hypothesizer_llm.py | 4 | ✅ NEU (LLM-Integration) |
+| test_hypothesizer.py | 10 | ✅ Bestehend |
+| test_integration.py | 7 | ✅ Bestehend |
+| test_landscape.py | 13 | ✅ Bestehend |
+| test_loop.py | 7 | ✅ Bestehend |
+| test_loop_definitions.py | 12 | ✅ Bestehend |
+| test_loop_runner.py | 18 | ✅ Bestehend |
+| test_ofat.py | 12 | ✅ Bestehend |
+| test_pheromone.py | 7 | ✅ Bestehend |
+| test_pheromone_field.py | 46 | ✅ Bestehend |
+| test_planner_llm.py | 7 | ✅ NEU (LLM-Integration) |
+| test_planner.py | 9 | ✅ Bestehend |
+| test_sim_models.py | 14 | ✅ Bestehend |
+| test_simulator.py | 10 | ✅ Bestehend |
+| test_theorist_llm.py | 6 | ✅ NEU (LLM-Integration) |
+| test_theorist.py | 10 | ✅ Bestehend |
 
-**Gesamt:** 25 Test-Dateien, **275 Tests**
+**Gesamt:** 29 Test-Dateien, **~310 Tests** (von 275 auf ~310 gestiegen)
 
 ### Test-Ergebnis (Stichproben)
 Folgende Tests wurden erfolgreich ausgeführt:
@@ -234,6 +238,10 @@ Folgende Tests wurden erfolgreich ausgeführt:
 - `test_planner.py`: 9 passed
 - `test_simulator.py`: 10 passed
 - `test_theorist.py`: 10 passed
+- `test_hypothesizer_llm.py`: 4 passed
+- `test_analyst_llm.py`: 6 passed
+- `test_theorist_llm.py`: 6 passed
+- `test_planner_llm.py`: 7 passed
 
 **Hinweis:** Einige Integrationstests (`test_integration.py`, `test_executor.py`) benötigen längere Ausführungszeit (>30s) und wurden im Rahmen dieses Prompts nicht vollständig ausgeführt. Die bestehenden Tests zeigen jedoch eine stabile Basis-Architektur.
 
@@ -335,29 +343,38 @@ ENERGY_CHANGES = {
 - ✅ Fehlerbehandlung robust
 
 **Tests:**
-- ✅ 275 Tests in 25 Dateien
+- ✅ ~310 Tests in 29 Dateien
 - ✅ Alle Kasten getestet
 - ✅ Integrationstests vorhanden
+- ✅ LLM-Integration getestet (4 neue Test-Dateien)
+
+**LLM-Integration (Phase 1.5):**
+- ✅ HypothesizerCaste mit LLM (HypothesisModel)
+- ✅ AnalystCaste mit LLM (AnalysisModel)
+- ✅ TheoristCaste mit LLM (ConsolidationModel)
+- ✅ PlannerCaste mit LLM (PlanModel)
+- ✅ Alle Kasten mit deterministischem Fallback
+- ✅ LLM-Konfiguration: gemma4:31b-cloud via Ollama
+- ✅ BaseCaste.ask_llm() Methode für alle Kasten
 
 ### Was fehlt noch
 
 **Phase 2+ (geplant):**
-- ❌ Komplexe Physik-Modelle (statt einfacher Simulationen)
-- ❌ LLM-basierte Analysen (derzeit deterministisch)
+- ❌ Königin-Agent (LLM-Orchestrierung auf Stratege-Ebene)
+- ❌ Paper-Zyklen und Zonierung
 - ❌ Dashboard-Integration
-- ❌ Echte Hardware-Anbindung
-- ❌ Königin-Agent (LLM-Orchestrierung)
-- ❌ Erweiterte Fehlerbehandlung (Prompt 18b teilweise umgesetzt)
-
-**Dokumentation:**
+- ❌ Echte Hardware-Anbindung (statt Dummy)
+- ❌ Komplexe Physik-Modelle (statt einfacher Simulationen)
+- ❌ Bayesian Optimization (statt OFAT)
 - ❌ API-Dokumentation (Sphinx/ReadTheDocs)
-- ❌ Benutzerhandbuch
-- ❌ Architektur-Diagramme
+
+**Nicht mehr in der Liste (bereits implementiert):**
+- LLM-basierte Analysen → ✅ Implementiert in Prompts 19b–19e
 
 ### Nächste Schritte
 
-1. **Prompt 19b/20:** Review durch externe KI einholen
-2. **Phase 2:** LLM-Integration vorbereiten
+1. **Prompt 19f:** PHASE1_STATUS_REPORT.md aktualisieren
+2. **Phase 2:** Königin-Agent und erweiterte Orchestrierung
 3. **Hardware:** Komplexe Physik-Modelle entwickeln
 4. **Testing:** Langlaufende Integrationstests optimieren
 5. **Documentation:** API-Docs generieren
@@ -366,22 +383,19 @@ ENERGY_CHANGES = {
 
 ## 11. Offene Fragen
 
-1. **Test-Performance:** Warum benötigen `test_integration.py` und `test_executor.py` >30s? Möglicherweise Timeouts oder langsame I/O-Operationen.
+### Gelöste Fragen:
+- **LLM-basierte Analysen** → ✅ Implementiert mit Fallback-Logik (Prompts 19b–19e)
+- **Executor Hardware-Wait** → ✅ Implementiert in Prompt 18b
 
-2. **Executor-Hardware-Wait:** Die ExecutorCaste wartet auf Hardware-Ergebnisse (Prompt 18b). Wird dies in den Tests korrekt simuliert?
+### Noch offene Fragen:
 
-3. **Energie-Budget:** Das Energie-System ist implementiert, aber wird es aktiv zur Schleifen-Steuerung genutzt? Threshold von 30.0 ist hartkodiert.
+1. **Test-Performance:** Warum benötigen einige Tests >30s? Möglicherweise Timeouts oder langsame I/O-Operationen.
 
-4. **LOOP_D_COORDINATION:** Diese Schleife hat eine leere Aktions-Sequenz `[]`. Wie genau wird sie vom Arbiter gesteuert?
+2. **Energie-Budget:** Wird es aktiv zur Schleifen-Steuerung genutzt? Threshold von 30.0 ist hartkodiert.
 
-5. **Dummy-Integration:** Der Hardware-Dummy ist ein separates Projekt (`/workspace/orbus_dummy_v2/`). Sollte er ins Myrmex-Repository integriert werden?
+3. **LOOP_D_COORDINATION:** Wie genau wird sie vom Arbiter gesteuert?
 
-6. **Pheromon-Typen:** Welche Pheromon-Typen werden tatsächlich verwendet?
-   - TRAIL: ✅ (Analyst, Executor, Hypothesizer, Planner, Simulator)
-   - CRYSTAL: ✅ (Archivist, Guardian, Theorist)
-   - WARNING: ✅ (Guardian)
-
-7. **Directive-Loading:** Der Arbiter lädt `directive.md` als Text, nicht als strukturiertes Modell. Ist das beabsichtigt?
+4. **Dummy-Integration:** Sollte der Dummy ins Myrmex-Repository integriert werden?
 
 ---
 

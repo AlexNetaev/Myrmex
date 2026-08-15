@@ -22,6 +22,16 @@ WORKSPACE_ROOT: Path = Path(
 ).resolve()
 
 # ---------------------------------------------------------------------------
+# LLM-KONFIGURATION
+# ---------------------------------------------------------------------------
+OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "gemma4:31b-cloud")
+OLLAMA_TEMPERATURE: float = float(os.getenv("OLLAMA_TEMPERATURE", "0.2"))
+OLLAMA_MAX_RETRIES: int = int(os.getenv("OLLAMA_MAX_RETRIES", "3"))
+OLLAMA_TIMEOUT_S: int = int(os.getenv("OLLAMA_TIMEOUT_S", "120"))
+OLLAMA_CONTEXT_SIZE: int = int(os.getenv("OLLAMA_CONTEXT_SIZE", "4096"))
+
+# ---------------------------------------------------------------------------
 # WORKSPACE-VERZEICHNISSE
 # ---------------------------------------------------------------------------
 SYSTEM_DIR: Path = WORKSPACE_ROOT / "00_System"

@@ -65,4 +65,4 @@ class QueueWatcher:
         processed_dir.mkdir(exist_ok=True)
         
         processed_file = processed_dir / f"{job_id}.json"
-        self.experiment_file.rename(processed_file)
+        self.experiment_file.replace(processed_file)

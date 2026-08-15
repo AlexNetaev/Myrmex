@@ -1,38 +1,56 @@
-```yaml
-# Logs and temporary files
-*.log
-*.tmp
-
-# Environment files
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.ENV.local
 .env
 .env.local
-*.env.*
-
-# Cache directories
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-coverage/
-htmlcov/
-.coverage
-
-# Dependencies
+.env.*
+.env.local.*
 .venv/
 venv/
-node_modules/
+ENV/
+env.bak/
+.ENV.bak/
 
-# Build artifacts
-dist/
+# Testing
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+.hypothesis/
+
+# Build and distribution
 build/
-target/
+dist/
+*.egg
+*.egg-info/
+*.so
+.libs/
+.deps/
 
-# Editors
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# System files
+*~
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
 ```

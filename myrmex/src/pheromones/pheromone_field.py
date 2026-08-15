@@ -185,8 +185,8 @@ class PheromoneField:
             with open(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, default=str)
             
-            # Atomares Umbenennen
-            Path(temp_path).rename(file_path)
+            # Atomares Umbenennen (funktioniert auf Linux UND Windows)
+            Path(temp_path).replace(file_path)
         except Exception:
             # Bei Fehler temp-Datei löschen
             try:

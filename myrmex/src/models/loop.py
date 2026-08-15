@@ -30,6 +30,7 @@ class ActionType(str, Enum):
     SIMULATE = "simulate"         # Simulation ausführen (-5 Energie)
     ANALYZE = "analyze"           # Daten analysieren (-10 Energie)
     CONSOLIDATE = "consolidate"   # Wissen konsolidieren (-5 Energie)
+    VALIDATE = "validate"         # Wissen validieren (Guardian)
 
 
 class LoopState(BaseModel):

@@ -12,6 +12,7 @@ from .planner import PlannerCaste
 from .executor import ExecutorCaste
 from .simulator import SimulatorCaste
 from .theorist import TheoristCaste
+from .guardian import GuardianCaste
 from . import sim_models
 from .registry import CasteRegistry, get_registry
 from .ofat import create_baseline_profile, next_ofat_step, get_current_parameter_name
@@ -25,6 +26,7 @@ __all__ = [
     "ExecutorCaste",
     "SimulatorCaste",
     "TheoristCaste",
+    "GuardianCaste",
     "sim_models",
     "CasteRegistry",
     "get_registry",

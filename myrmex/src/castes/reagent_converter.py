@@ -108,9 +108,60 @@ def convert_concentrations_to_reagents(
             "Total volume %.1f µL exceeds maximum %.1f µL - scaling down",
             total, total_volume_ul,
         )
-        # Skalieren: Alle Volumina proportional reduzieren
-        scale_factor = total_volume_ul / total
-        for reagent in reagents:
-            reagent["volume_ul"] = round(reagent["volume_ul"] * scale_factor, 2)
+        # Skalieren: Alle Volumina proportional reduzieren, aber Mindestvolumina einhalten
+        # Zuerst: Mindestvolumina identifizieren
+        min_volumes = {r["reagent_name"]: REAGENT_CONFIG[r["reagent_name"]]["min_volume_ul"] for r in reagents}
+        
+        # Prüfen ob die Mindestvolumina bereits das Maximum überschreiten
+        min_total = sum(min_volumes.values())
+        if min_total > total_volume_ul:
+            logger.error(
+                "Minimum volumes (%.1f µL) exceed total volume limit (%.1f µL) - cannot scale",
+                min_total, total_volume_ul,
+            )
+            # In diesem Fall müssen wir trotzdem skalieren, aber warnen
+            scale_factor = total_volume_ul / total
+            for reagent in reagents:
+                reagent["volume_ul"] = round(reagent["volume_ul"] * scale_factor, 2)
+        else:
+            # Proportionale Skalierung mit Mindestvolumina als Untergrenze
+            scale_factor = total_volume_ul / total
+            for reagent in reagents:
+                scaled_volume = reagent["volume_ul"] * scale_factor
+                min_vol = min_volumes[reagent["reagent_name"]]
+                # Mindestvolumen einhalten
+                reagent["volume_ul"] = max(min_vol, round(scaled_volume, 2))
+            
+            # Zweite Iteration: Wenn noch über dem Limit, erneut skalieren (nur die, die nicht am Minimum sind)
+            total = sum(r["volume_ul"] for r in reagents)
+            if total > total_volume_ul:
+                # Berechne verbleibendes Volumen nach Abzug der Mindestvolumina
+                remaining_volume = total_volume_ul - min_total
+                if remaining_volume > 0:
+                    # Skaliere nur die Volumina über dem Minimum
+                    above_min = [(r, r["volume_ul"] - min_volumes[r["reagent_name"]]) for r in reagents if r["volume_ul"] > min_volumes[r["reagent_name"]]]
+                    above_min_total = sum(v for _, v in above_min)
+                    if above_min_total > 0:
+                        scale_factor = remaining_volume / above_min_total
+                        for reagent, excess in above_min:
+                            reagent["volume_ul"] = min_volumes[reagent["reagent_name"]] + excess * scale_factor
+                        
+                        # Auf 2 Dezimalstellen runden und sicherstellen dass Gesamt <= Limit
+                        for reagent in reagents:
+                            reagent["volume_ul"] = round(reagent["volume_ul"], 2)
+                        
+                        # Finale Anpassung falls durch Rundung noch über dem Limit
+                        total = sum(r["volume_ul"] for r in reagents)
+                        if total > total_volume_ul:
+                            # Kleinstes Volumen über Minimum finden und anpassen
+                            diff = total - total_volume_ul
+                            for reagent in sorted(reagents, key=lambda r: r["volume_ul"], reverse=True):
+                                min_vol = min_volumes[reagent["reagent_name"]]
+                                reduction = min(diff, reagent["volume_ul"] - min_vol)
+                                if reduction > 0:
+                                    reagent["volume_ul"] = round(reagent["volume_ul"] - reduction, 2)
+                                    diff -= reduction
+                                    if diff <= 0:
+                                        break
     
     return reagents

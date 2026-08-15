@@ -64,6 +64,8 @@ class WorkspaceManager:
             self.processed_queue_dir, self.failed_queue_dir,
             self.knowledge_base_dir, self.knowledge_base_archive_dir,
             self.loops_dir,
+            # NEU: Hardware-Profiles-Verzeichnis
+            self.workspace_root / "hardware_profiles",
         ]
         for d in directories:
             d.mkdir(parents=True, exist_ok=True)
@@ -79,3 +81,35 @@ class WorkspaceManager:
         theory = self.knowledge_base_dir / "theory_baseline.md"
         if not theory.exists():
             theory.write_text("# Myrmex Theory Baseline\n\n*(No findings recorded yet.)*\n", encoding="utf-8")
+        
+        # NEU: Hardware-Profil erstellen (falls nicht vorhanden)
+        self._create_hardware_profile()
+
+    def _create_hardware_profile(self) -> None:
+        """Erstellt das Hardware-Profil für den Dummy, falls nicht vorhanden."""
+        hardware_profile_path = self.workspace_root / "hardware_profiles" / "orbus_dummy_v2.yaml"
+        
+        if hardware_profile_path.exists():
+            return  # Bereits vorhanden
+        
+        # Hardware-Profil aus dem Projekt-Root kopieren (myrmex/hardware_profiles/)
+        project_root = Path(__file__).resolve().parent.parent.parent
+        source_profile_path = project_root / "hardware_profiles" / "orbus_dummy_v2.yaml"
+        
+        if source_profile_path.exists():
+            import shutil
+            shutil.copy2(source_profile_path, hardware_profile_path)
+            logger.info(f"Copied hardware profile to {hardware_profile_path}")
+        else:
+            logger.warning(
+                f"Hardware profile not found at {source_profile_path}. "
+                f"Creating minimal profile."
+            )
+            # Minimales Profil erstellen
+            hardware_profile_path.write_text(
+                "# Minimal Hardware Profile\n"
+                "metadata:\n"
+                "  name: 'Minimal Profile'\n"
+                "  version: '1.0.0'\n",
+                encoding="utf-8",
+            )

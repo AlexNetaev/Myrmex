@@ -1,0 +1,148 @@
+# Hardware-Profil: OrbusSim Dummy V2
+# Experiment: pH-sensitive Fluoreszenzkinetik (Fenton-Reaktion)
+# Diese Datei beschreibt, wie die Hardware zu bedienen ist.
+# Wenn die Hardware wechselt, wird nur diese Datei ausgetauscht.
+
+metadata:
+  name: "OrbusSim Dummy V2"
+  version: "2.0.0"
+  description: "5-Stationen Karussell für Fenton-Experimente mit Fluoreszenz-Messung"
+  experiment_type: "fenton_fluorescence"
+
+# ---------------------------------------------------------------------------
+# 1. HARDWARE LIMITS
+# ---------------------------------------------------------------------------
+# Alle Parameter, die validiert werden müssen, bevor das Experiment
+# an die Hardware übergeben wird.
+limits:
+  mixing_speed_rpm:
+    min: 0
+    max: 2000
+  mixing_time_s:
+    min: 0
+    max: 120
+  target_temperature_c:
+    min: 20.0
+    max: 75.0  # Harte Grenze: Fluorescein degradiert darüber
+  heating_time_s:
+    min: 0
+    max: 300
+  measurement_interval_ms:
+    min: 50
+    max: 5000
+  fluorescence_duration_s:
+    min: 5
+    max: 300
+  excitation_wavelength_nm:
+    min: 200
+    max: 900
+  emission_wavelength_nm:
+    min: 200
+    max: 1000
+
+# ---------------------------------------------------------------------------
+# 2. REAGENZIEN
+# ---------------------------------------------------------------------------
+# Welche Reagenzien die Hardware erwartet.
+# Der Executor validiert, dass genau diese Reagenzien geliefert werden.
+reagents:
+  expected:
+    - name: "ascorbic_acid"
+      role: "Reduktionsmittel"
+      concentration_range_mm: [1.0, 50.0]
+      volume_range_ul: [50.0, 2000.0]
+    - name: "fecl3"
+      role: "Katalysator"
+      concentration_range_mm: [0.1, 5.0]
+      volume_range_ul: [10.0, 500.0]
+    - name: "h2o2"
+      role: "Co-Oxidationsmittel"
+      concentration_range_mm: [1.0, 100.0]
+      volume_range_ul: [20.0, 1000.0]
+    - name: "fluorescein"
+      role: "pH-sensitives Fluorophor"
+      concentration_range_mm: [0.001, 0.02]  # 1-20 µM
+      volume_range_ul: [10.0, 500.0]
+    - name: "phosphate_buffer"
+      role: "pH-Stabilisierung"
+      concentration_range_mm: [10.0, 100.0]
+      volume_range_ul: [50.0, 2000.0]
+  # Gesamt-Volumen-Beschränkung
+  total_volume_max_ul: 5000
+
+# ---------------------------------------------------------------------------
+# 3. UMRECHNUNGEN
+# ---------------------------------------------------------------------------
+# Einfache, lineare Umrechnungen, die der Executor anwendet.
+# WICHTIG: Nur lineare Umrechnungen hier!
+# Komplexe Formeln gehören in ein Code-Plugin (spätere Phase).
+conversions:
+  concentration_to_volume:
+    formula: "linear"
+    description: "Volumen aus Konzentration und Gesamt-Volumen berechnen"
+    parameters:
+      total_volume_ul: 1000.0  # Standard-Gesamtvolumen
+
+# ---------------------------------------------------------------------------
+# 4. EXPERIMENT-SCHEMA
+# ---------------------------------------------------------------------------
+# Wie die experiment.json aussehen muss, die an die Hardware geht.
+experiment_schema:
+  required_fields:
+    - job_id
+    - cycle_id
+    - parameters
+    - station_4_action
+  parameters_schema:
+    required:
+      - reagents
+      - mixing_speed_rpm
+      - mixing_time_s
+      - target_temperature_c
+      - heating_time_s
+      - measurement_interval_ms
+      - fluorescence_duration_s
+    optional:
+      - excitation_wavelength_nm  # Default: 490
+      - emission_wavelength_nm    # Default: 520
+  reagents_format: "list"  # "list" oder "dict"
+
+# ---------------------------------------------------------------------------
+# 5. OUTPUT-FORMAT
+# ---------------------------------------------------------------------------
+# Welche Dateien die Hardware erzeugt.
+# Der Analyst weiß, was er erwarten kann.
+output_files:
+  - name: "station1_dosing.json"
+    type: "json"
+    description: "Dosier-Protokoll"
+  - name: "station2_mixing.json"
+    type: "json"
+    description: "Misch-Protokoll"
+  - name: "station3_temperature.csv"
+    type: "csv"
+    columns: ["time_ms", "temp_c", "heater_power_w"]
+    description: "Temperatur-Zeitreihe"
+  - name: "station4_fluorescence.csv"
+    type: "csv"
+    columns: ["time_ms", "fluorescence_raw_au"]
+    description: "Fluoreszenz-Zeitreihe (Rohdaten)"
+  - name: "station5_cleanup.json"
+    type: "json"
+    description: "Reinigungs-Protokoll"
+  - name: "measurement.csv"
+    type: "csv"
+    columns: ["time_ms", "temp_c", "fluorescence_raw_au"]
+    description: "Zusammengeführte Messdaten"
+  - name: "hardware_protocol.json"
+    type: "json"
+    description: "Gesamtbericht (target vs. achieved)"
+
+# ---------------------------------------------------------------------------
+# 6. STANDARDS
+# ---------------------------------------------------------------------------
+# Default-Werte für optionale Parameter.
+defaults:
+  excitation_wavelength_nm: 490
+  emission_wavelength_nm: 520
+  station_4_action: "FLUORESCENCE"

@@ -278,6 +278,47 @@ class BaseCaste(ABC):
             return {}
         # Für Phase 1: Nur existence check, kein YAML-Parsing
         return {"_path": str(profile_path), "_exists": True}
+
+    def ask_llm(
+        self,
+        prompt: str,
+        system_prompt: str = "",
+        response_model: type | None = None,
+        max_retries: int = 3,
+        temperature: float = 0.2,
+        context_size: int = 4096,
+        model: str = "gemma4:31b-cloud",
+    ) -> Any:
+        """
+        Ruft das LLM auf und gibt das validierte Ergebnis zurück.
+        
+        Args:
+            prompt: Der User-Prompt.
+            system_prompt: Der System-Prompt.
+            response_model: Das Pydantic-Modell für die Validierung.
+            max_retries: Maximale Anzahl der Versuche.
+            temperature: Die Temperatur für die Generierung.
+            context_size: Die Context-Size für das LLM.
+            model: Das zu verwendende Modell.
+        
+        Returns:
+            Das validierte Ergebnis (Instanz von response_model).
+        
+        Raises:
+            Exception: Wenn das LLM nicht verfügbar ist oder keine gültige
+                       Antwort gibt.
+        """
+        from src.llm_wrapper import ask_llm_with_validation
+        
+        return ask_llm_with_validation(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            response_model=response_model,
+            max_retries=max_retries,
+            model=model,
+            temperature=temperature,
+            context_size=context_size,
+        )
     
     # ------------------------------------------------------------------ #
     # Shadow Memory (Audit-Trail)

@@ -10,22 +10,54 @@ __pycache__/
 
 # Dependencies
 .venv/
-venv/
-.env
-.env.local
-*.env.*
+.ENV
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+.MF
+tags
+TAGS
+.IDEAssistant
+.project
+.pydevproject
+.settings/
 
 # Testing
 .pytest_cache/
-.coverage
-coverage/
+.hypothesis/
+.coverage*
 
-# Build artifacts
-dist/
+# Distribution / packaging
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
 *.egg
 
-# Editors
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -34,10 +66,4 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Temp files
-*.tmp
 ```

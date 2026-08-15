@@ -24,6 +24,7 @@ from src.castes.analyst import AnalystCaste
 from src.castes.planner import PlannerCaste
 from src.castes.executor import ExecutorCaste
 from src.castes.simulator import SimulatorCaste
+from src.castes.theorist import TheoristCaste
 
 logger = logging.getLogger("castes.registry")
 
@@ -62,9 +63,8 @@ class CasteRegistry:
         # SimulatorCaste jetzt implementiert
         self.register(ActionType.SIMULATE, SimulatorCaste)
         
-        # Noch fehlende Kasten — vorerst Placeholder
-        # TODO: TheoristCaste/ArchivistCaste implementieren und hier registrieren
-        self.register(ActionType.CONSOLIDATE, PlaceholderCaste)
+        # TheoristCaste jetzt implementiert
+        self.register(ActionType.CONSOLIDATE, TheoristCaste)
         
         logger.info(
             "CasteRegistry initialized with %d action types (%d placeholders)",

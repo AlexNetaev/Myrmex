@@ -63,3 +63,11 @@ MIN_PHEROMONE_STRENGTH: float = 0.1
 
 # Die maximale Anzahl von Zyklen, die der Arbiter vorausplant
 MAX_ARBITER_LOOKAHEAD: int = 3
+
+# ---------------------------------------------------------------------------
+# PHEROMON-FELD-KONSTANTEN
+# ---------------------------------------------------------------------------
+REINFORCE_AMOUNT: float = 0.1        # Stärke-Erhöhung bei Nutzung
+WEAKEN_AMOUNT: float = 0.2           # Stärke-Reduktion bei Widerlegung
+CRYSTALLIZE_THRESHOLD: float = 0.9   # Schwellenwert für Auto-Kristallisierung
+CRYSTAL_REINFORCE_AMOUNT: float = 0.0  # Kristalle werden nicht weiter verstärkt

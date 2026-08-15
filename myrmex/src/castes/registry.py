@@ -25,6 +25,7 @@ from src.castes.planner import PlannerCaste
 from src.castes.executor import ExecutorCaste
 from src.castes.simulator import SimulatorCaste
 from src.castes.theorist import TheoristCaste
+from src.castes.guardian import GuardianCaste
 
 logger = logging.getLogger("castes.registry")
 
@@ -65,6 +66,9 @@ class CasteRegistry:
         
         # TheoristCaste jetzt implementiert
         self.register(ActionType.CONSOLIDATE, TheoristCaste)
+        
+        # GuardianCaste jetzt implementiert
+        self.register(ActionType.VALIDATE, GuardianCaste)
         
         logger.info(
             "CasteRegistry initialized with %d action types (%d placeholders)",

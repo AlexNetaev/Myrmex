@@ -33,11 +33,11 @@ def temp_workspace():
 
 
 @pytest.fixture
-def knowledge_pheromones(temp_workspace):
-    """Erstellt TRAIL-Pheromone mit Knowledge-Tags."""
+def knowledge_pheromones(theorist):
+    """Erstellt TRAIL-Pheromone mit Knowledge-Tags im gleichen Feld wie die TheoristCaste."""
     from src.models.pheromone import Pheromone
     
-    field = PheromoneField(field_root=temp_workspace / "01_Pheromon_Field")
+    field = theorist.pheromone_field
     
     pheromones = []
     # Erstelle Pheromone mit unterschiedlichen Zeitstempeln für Sortier-Test

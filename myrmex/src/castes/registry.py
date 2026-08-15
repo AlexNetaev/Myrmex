@@ -26,6 +26,7 @@ from src.castes.executor import ExecutorCaste
 from src.castes.simulator import SimulatorCaste
 from src.castes.theorist import TheoristCaste
 from src.castes.guardian import GuardianCaste
+from src.castes.hypothesizer import HypothesizerCaste
 
 logger = logging.getLogger("castes.registry")
 
@@ -157,3 +158,15 @@ def get_registry() -> CasteRegistry:
     if _global_registry is None:
         _global_registry = CasteRegistry()
     return _global_registry
+
+
+def reset_registry() -> None:
+    """
+    Setzt die globale Registry-Instanz zurück.
+    
+    Diese Funktion sollte in Tests verwendet werden, um eine frische
+    Registry-Instanz zwischen den Tests zu erhalten und so Test-Isolation
+    zu gewährleisten.
+    """
+    global _global_registry
+    _global_registry = None

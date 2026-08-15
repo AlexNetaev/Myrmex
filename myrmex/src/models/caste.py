@@ -61,3 +61,36 @@ class CasteRegistry(BaseModel):
         # Hinweis: Diese Methode wird in Phase 1 nur als Platzhalter angelegt.
         # Die tatsächliche Implementierung folgt in einem späteren Schritt.
         raise NotImplementedError("CasteRegistry.get_default_registry() wird in Phase 1+ implementiert")
+
+
+class CasteExecutionResult(BaseModel):
+    """
+    Ergebnis einer Kasten-Ausführung.
+    Wird von BaseCaste.run() zurückgegeben und im Shadow Memory persistiert.
+    """
+    model_config = ConfigDict(extra="forbid")
+    
+    caste_name: CasteName = Field(..., description="Die ausführende Kaste")
+    success: bool = Field(..., description="Ob die Ausführung erfolgreich war")
+    
+    # Pheromon-Statistiken
+    pheromones_read: int = Field(default=0, ge=0, description="Anzahl gelesener Pheromone")
+    pheromones_written: int = Field(default=0, ge=0, description="Anzahl geschriebener Pheromone")
+    
+    # Optional: Spezifische Outputs
+    output_files: list[str] = Field(
+        default_factory=list,
+        description="Liste der erzeugten Dateien (Pfade relativ zum work_dir)"
+    )
+    
+    # Optional: Fehlermeldung
+    error_message: str | None = Field(
+        default=None,
+        description="Fehlermeldung, falls success=False"
+    )
+    
+    # Optional: Kasten-spezifische Daten (JSON-serialisierbar)
+    extra_data: dict = Field(
+        default_factory=dict,
+        description="Kasten-spezifische Ergebnisdaten"
+    )

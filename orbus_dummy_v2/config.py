@@ -6,7 +6,7 @@ import os
 
 # Workspace-Root (kann über Umgebungsvariable überschrieben werden)
 WORKSPACE_ROOT = Path(
-    os.getenv("MYRMEX_WORKSPACE", Path(__file__).resolve().parent.parent / "myrmex_workspace")
+    os.getenv("MYRMEX_WORKSPACE", Path(__file__).resolve().parent.parent / "myrmex" / "myrmex_workspace")
 )
 
 # Queue-Verzeichnis
